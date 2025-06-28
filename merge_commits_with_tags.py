@@ -175,6 +175,7 @@ def main():
     parser.add_argument('--interval', required=False, default=None, help='Interval size (e.g., 7d, 1w, 1m)')
     parser.add_argument('--count', required=False, type=int, default=None, help='Number of intervals')
     parser.add_argument('--csv', required=False, default=None, help='CSV output file')
+    parser.add_argument('--ma', required=False, type=int, default=3, help='Moving average window (number of intervals, default 3, simple)')
     args = parser.parse_args()
 
     print(args)
@@ -237,9 +238,26 @@ def main():
     results.reverse()  # earliest interval first
     # Write CSV
     csv_file = args.csv or 'dora_report.csv'
+    # Compute simple moving averages if requested
+    ma_fields = ['deployment_frequency', 'change_failure_rate', 'mttr', 'mean_lead_time', 'deployment_count', 'total_merges']
+    if args.ma and args.ma > 1:
+        for field in ma_fields:
+            ma_values = []
+            for i in range(len(results)):
+                window = results[max(0, i - args.ma + 1):i + 1]
+                vals = [row[field] for row in window]
+                avg = sum(vals) / len(vals) if vals else 0
+                ma_values.append(avg)
+            for i, avg in enumerate(ma_values):
+                results[i][f'{field}_ma'] = avg
+        ma_fieldnames = [f'{field}_ma' for field in ma_fields]
+    else:
+        ma_fieldnames = []
     with open(csv_file, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=[
-            'interval_start', 'interval_end', 'deployment_frequency', 'change_failure_rate', 'mttr', 'mean_lead_time', 'deployment_count', 'total_merges'
+            'interval_start', 'interval_end',
+            'deployment_frequency', 'change_failure_rate', 'mttr', 'mean_lead_time', 'deployment_count', 'total_merges',
+            *ma_fieldnames
         ])
         writer.writeheader()
         for row in results:
