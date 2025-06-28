@@ -1,13 +1,7 @@
-import os
 import subprocess
-import tempfile
-import shutil
-import time
-import sys
 import logging
 import pytest
 from merge_commits_with_tags import get_merge_commits, classify_tag_state
-
 
 @pytest.fixture(autouse=True, scope='session')
 def set_debug_logging():
@@ -58,13 +52,36 @@ def run_git(cmd, cwd):
         raise RuntimeError(f"Git command failed: {' '.join(cmd)}\n{result.stderr}")
     return result.stdout.strip()
 
-def test_pipeline_tag_classification_integration(tmp_path):
+def create_feature(tempdir, faker):
+    branch_name = faker.word()
+    file_name = faker.file_name(extension='txt')
+    content = faker.text()
+    commit_message = faker.sentence()
+    run_git(['checkout', 'master'], tempdir)
+    run_git(['checkout', '-b', branch_name], tempdir)
+    with open(tempdir / file_name, 'w') as f:
+        f.write(content)
+    run_git(['add', file_name], tempdir)
+    run_git(['commit', '-m', commit_message], tempdir)
+    run_git(['checkout', 'master'], tempdir)
+    run_git(['merge', '--no-ff', branch_name, '-m', f'Merge {branch_name}'], tempdir)
+
+@pytest.fixture
+def good_feature(faker):
+    def _good_feature(tempdir, tag_name):
+        create_feature(tempdir, faker)
+        run_git(['tag', tag_name], tempdir)
+    return _good_feature
+
+@pytest.fixture
+def bad_feature(faker):
+    def _bad_feature(tempdir):
+        create_feature(tempdir, faker)
+
+    return _bad_feature
+
+def test_pipeline_tag_classification_integration(tmp_path, good_feature, bad_feature):
     tempdir = tmp_path
-    def run_git(cmd, cwd):
-        result = subprocess.run(['git'] + cmd, cwd=cwd, capture_output=True, text=True)
-        if result.returncode != 0:
-            raise RuntimeError(f"Git command failed: {' '.join(cmd)}\n{result.stderr}")
-        return result.stdout.strip()
     run_git(['init'], tempdir)
     run_git(['config', 'user.email', 'test@example.com'], tempdir)
     run_git(['config', 'user.name', 'Test User'], tempdir)
@@ -72,35 +89,18 @@ def test_pipeline_tag_classification_integration(tmp_path):
         f.write('init\n')
     run_git(['add', 'file.txt'], tempdir)
     run_git(['commit', '-m', 'Initial commit'], tempdir)
+
     # 1st merge: no tag (should be failed)
-    run_git(['checkout', '-b', 'feature1'], tempdir)
-    with open(tempdir / 'file.txt', 'a') as f:
-        f.write('feature1\n')
-    run_git(['add', 'file.txt'], tempdir)
-    run_git(['commit', '-m', 'Feature 1'], tempdir)
-    run_git(['checkout', 'master'], tempdir)
-    run_git(['merge', '--no-ff', 'feature1', '-m', 'Merge feature1'], tempdir)
+    bad_feature(tempdir)
+
     # 2nd merge: build tag (should be recovery)
-    run_git(['checkout', '-b', 'feature2'], tempdir)
-    with open(tempdir / 'file2.txt', 'w') as f:
-        f.write('feature2\n')
-    run_git(['add', 'file2.txt'], tempdir)
-    run_git(['commit', '-m', 'Feature 2'], tempdir)
-    run_git(['checkout', 'master'], tempdir)
-    run_git(['merge', '--no-ff', 'feature2', '-m', 'Merge feature2'], tempdir)
-    merge_commit2 = run_git(['rev-parse', 'HEAD'], tempdir)
-    run_git(['tag', 'build-2', merge_commit2], tempdir)
+    good_feature(tempdir, 'build-1')
+
     # 3rd merge: build tag (should be success)
-    run_git(['checkout', '-b', 'feature3'], tempdir)
-    with open(tempdir / 'file3.txt', 'w') as f:
-        f.write('feature3\n')
-    run_git(['add', 'file3.txt'], tempdir)
-    run_git(['commit', '-m', 'Feature 3'], tempdir)
-    run_git(['checkout', 'master'], tempdir)
-    run_git(['merge', '--no-ff', 'feature3', '-m', 'Merge feature3'], tempdir)
-    merge_commit3 = run_git(['rev-parse', 'HEAD'], tempdir)
-    run_git(['tag', 'build-3', merge_commit3], tempdir)
+    good_feature(tempdir, 'build-2')
+
     print(run_git(['log','--graph'], tempdir))
+
     # Query merge commits
     merges = get_merge_commits(str(tempdir), '', '')
     prev_state = 'failed'
