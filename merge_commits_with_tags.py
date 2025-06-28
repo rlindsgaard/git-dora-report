@@ -77,6 +77,39 @@ def classify_tag_state(tags: list, tag_pattern: str, prev_state: str = None) -> 
     else:
         return 'failed'
 
+def get_first_commit_time_of_branch(repo_path: str, merge_commit_hash: str, log=None) -> int:
+    # Get the second parent (feature branch tip) of the merge commit
+    cmd = ['git', '-C', repo_path, 'rev-list', '--parents', '-n', '1', merge_commit_hash]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        if log:
+            log.error(f"Failed to get parents for {merge_commit_hash}: {result.stderr}")
+        return None
+    parts = result.stdout.strip().split()
+    if len(parts) < 3:
+        if log:
+            log.warning(f"Merge commit {merge_commit_hash} does not have two parents")
+        return None
+    feature_branch_tip = parts[2]
+    # Find the root commit of the feature branch (not reachable from the first parent)
+    cmd = [
+        'git', '-C', repo_path, 'rev-list', '--reverse', feature_branch_tip, f'^{parts[1]}'
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0 or not result.stdout.strip():
+        if log:
+            log.error(f"Failed to get root commit for branch tip {feature_branch_tip}: {result.stderr}")
+        return None
+    root_commit = result.stdout.strip().split('\n')[0]
+    # Get the commit time of the root commit
+    cmd = ['git', '-C', repo_path, 'show', '-s', '--format=%ct', root_commit]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        if log:
+            log.error(f"Failed to get commit time for {root_commit}: {result.stderr}")
+        return None
+    return int(result.stdout.strip())
+
 def main():
     parser = argparse.ArgumentParser(description='Generate DORA metrics from merge commits in a git repo.')
     parser.add_argument('repo', help='Path to the git repository')
@@ -111,10 +144,18 @@ def main():
     last_success_time = None
     last_failed_time = None
     recovery_times = []
+    lead_times = []
     for m in merges:
         state = classify_tag_state(m['tags'], args.tag, prev_state)
         if log:
             log.debug(f"Commit {m['hash']} tags={m['tags']} state={state}")
+        # Lead time calculation
+        first_commit_time = get_first_commit_time_of_branch(args.repo, m['hash'], log=log)
+        if first_commit_time:
+            lead_time = m['timestamp'] - first_commit_time
+            lead_times.append(lead_time)
+            if log:
+                log.debug(f"Lead time for merge {m['hash']}: {lead_time} seconds")
         states.append(state)
         if state in ['success', 'recovery']:
             times.append(m['timestamp'])
@@ -132,13 +173,14 @@ def main():
     deployment_frequency = deployment_count / ((times[-1] - times[0]) / 86400) if len(times) > 1 else deployment_count
     change_failure_rate = change_failure_count / total_merges if total_merges else 0
     mttr = statistics.mean(recovery_times) if recovery_times else 0
+    mean_lead_time = statistics.mean(lead_times) if lead_times else 0
     print('DORA Metrics Report:')
     print(f'- Deployment Frequency: {deployment_frequency:.2f} per day')
     print(f'- Change Failure Rate: {change_failure_rate:.2%}')
     print(f'- Mean Time to Recovery (MTTR): {mttr/3600:.2f} hours')
+    print(f'- Mean Lead Time for Changes: {mean_lead_time/3600:.2f} hours')
     print(f'- Total Deployments: {deployment_count}')
     print(f'- Total Merge Events: {total_merges}')
-    # Optionally print lead time for changes if you have commit-to-merge info
     # Print details for each merge
     for m, state in zip(merges, states):
         print(f"{m['hash']} | {m['timestamp']} | {', '.join(m['tags'])} | {state} | {m['subject']}")
