@@ -1,10 +1,11 @@
 import subprocess
 import argparse
-import re
 import fnmatch
 import statistics
 import logging
+import csv
 from typing import List, Dict
+from datetime import datetime, timedelta
 
 def get_merge_commits(repo_path: str, since: str, until: str, tag_pattern: str = None, branch: str = None, log=None) -> List[Dict]:
     if log:
@@ -110,34 +111,19 @@ def get_first_commit_time_of_branch(repo_path: str, merge_commit_hash: str, log=
         return None
     return int(result.stdout.strip())
 
-def main():
-    parser = argparse.ArgumentParser(description='Generate DORA metrics from merge commits in a git repo.')
-    parser.add_argument('repo', help='Path to the git repository')
-    parser.add_argument('--since', required=False, default=None, help='Start date (e.g., "2024-01-01"). Defaults to the beginning of history.')
-    parser.add_argument('--until', required=False, default=None, help='End date (e.g., "2024-12-31"). Defaults to now.')
-    parser.add_argument('--tag', required=True, help='Tag pattern to classify (e.g., "build-*")')
-    parser.add_argument('--branch', required=False, default=None, help='Branch to scan (e.g., "main" or "master")')
-    parser.add_argument('-v', '--verbose', action='count', default=0, help='Increase output verbosity (repeat for more)')
-    args = parser.parse_args()
-
-    # Set up logging
-    log_level = logging.WARNING
-    if args.verbose == 1:
-        log_level = logging.INFO
-    elif args.verbose >= 2:
-        log_level = logging.DEBUG
-    logging.basicConfig(level=log_level, format='[%(levelname)s] %(message)s')
-    log = logging.getLogger("dora-metrics")
-    log.info(f"Verbosity set to {args.verbose}")
-
-    since = args.since if args.since else ''
-    if not args.until:
-        from datetime import datetime
-        until = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+def parse_interval(interval_str):
+    if interval_str.endswith('d'):
+        return timedelta(days=int(interval_str[:-1]))
+    elif interval_str.endswith('w'):
+        return timedelta(weeks=int(interval_str[:-1]))
+    elif interval_str.endswith('m'):
+        # Approximate a month as 30 days
+        return timedelta(days=30*int(interval_str[:-1]))
     else:
-        until = args.until
+        raise ValueError('Invalid interval format. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)')
 
-    merges = get_merge_commits(args.repo, since, until, args.tag, args.branch, log=log)
+def dora_metrics_for_range(repo, tag, branch, since, until, log):
+    merges = get_merge_commits(repo, since, until, tag, branch, log=log)
     prev_state = 'failed'
     states = []
     times = []
@@ -146,16 +132,12 @@ def main():
     recovery_times = []
     lead_times = []
     for m in merges:
-        state = classify_tag_state(m['tags'], args.tag, prev_state)
-        if log:
-            log.debug(f"Commit {m['hash']} tags={m['tags']} state={state}")
+        state = classify_tag_state(m['tags'], tag, prev_state)
         # Lead time calculation
-        first_commit_time = get_first_commit_time_of_branch(args.repo, m['hash'], log=log)
+        first_commit_time = get_first_commit_time_of_branch(repo, m['hash'], log=log)
         if first_commit_time:
             lead_time = m['timestamp'] - first_commit_time
             lead_times.append(lead_time)
-            if log:
-                log.debug(f"Lead time for merge {m['hash']}: {lead_time} seconds")
         states.append(state)
         if state in ['success', 'recovery']:
             times.append(m['timestamp'])
@@ -166,7 +148,6 @@ def main():
         if state in ['success', 'recovery']:
             last_success_time = m['timestamp']
         prev_state = state if state != 'recovery' else 'success'
-    # DORA metrics
     deployment_count = states.count('success') + states.count('recovery')
     total_merges = len(states)
     change_failure_count = states.count('failed')
@@ -174,16 +155,97 @@ def main():
     change_failure_rate = change_failure_count / total_merges if total_merges else 0
     mttr = statistics.mean(recovery_times) if recovery_times else 0
     mean_lead_time = statistics.mean(lead_times) if lead_times else 0
-    print('DORA Metrics Report:')
-    print(f'- Deployment Frequency: {deployment_frequency:.2f} per day')
-    print(f'- Change Failure Rate: {change_failure_rate:.2%}')
-    print(f'- Mean Time to Recovery (MTTR): {mttr/3600:.2f} hours')
-    print(f'- Mean Lead Time for Changes: {mean_lead_time/3600:.2f} hours')
-    print(f'- Total Deployments: {deployment_count}')
-    print(f'- Total Merge Events: {total_merges}')
-    # Print details for each merge
-    for m, state in zip(merges, states):
-        print(f"{m['hash']} | {m['timestamp']} | {', '.join(m['tags'])} | {state} | {m['subject']}")
+    return {
+        'deployment_frequency': deployment_frequency,
+        'change_failure_rate': change_failure_rate,
+        'mttr': mttr,
+        'mean_lead_time': mean_lead_time,
+        'deployment_count': deployment_count,
+        'total_merges': total_merges
+    }
+
+def main():
+    parser = argparse.ArgumentParser(description='Generate DORA metrics from merge commits in a git repo.')
+    parser.add_argument('repo', help='Path to the git repository')
+    parser.add_argument('--since', required=False, default=None, help='Start date (e.g., "2024-01-01"). Defaults to the beginning of history.')
+    parser.add_argument('--until', required=False, default=None, help='End date (e.g., "2024-12-31"). Defaults to now.')
+    parser.add_argument('--tag', required=True, help='Tag pattern to classify (e.g., "build-*")')
+    parser.add_argument('--branch', required=False, default=None, help='Branch to scan (e.g., "main" or "master")')
+    parser.add_argument('-v', '--verbose', action='count', default=0, help='Increase output verbosity (repeat for more)')
+    parser.add_argument('--interval', required=False, default=None, help='Interval size (e.g., 7d, 1w, 1m)')
+    parser.add_argument('--count', required=False, type=int, default=None, help='Number of intervals')
+    parser.add_argument('--csv', required=False, default=None, help='CSV output file')
+    args = parser.parse_args()
+
+    print(args)
+    # Set up logging
+    log_level = logging.WARNING
+    if args.verbose == 1:
+        log_level = logging.INFO
+    elif args.verbose >= 2:
+        log_level = logging.DEBUG
+    logging.basicConfig(level=log_level, format='[%(levelname)s] %(message)s')
+    log = logging.getLogger("dora-metrics")
+    log.info(f"Verbosity set to {args.verbose}")
+
+    # Always use interval logic
+    if not args.until:
+        until_dt = datetime.now()
+    else:
+        until_dt = datetime.strptime(args.until, '%Y-%m-%dT%H:%M:%S') if 'T' in args.until else datetime.strptime(args.until, '%Y-%m-%d')
+    if not args.since:
+        # Find the timestamp of the first commit in the repo
+        cmd = ['git', '-C', args.repo, 'rev-list', '--max-parents=0', '--reverse', '--timestamp', 'HEAD']
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode == 0 and result.stdout.strip():
+            # Output format: <timestamp> <commit_hash>
+            first_line = result.stdout.strip().split('\n')[0]
+            first_timestamp = int(first_line.split()[0])
+            since_dt = datetime.fromtimestamp(first_timestamp)
+            log.info(f"No --since provided, using timestamp of first commit: {since_dt}")
+        else:
+            since_dt = datetime(1970, 1, 1)
+            log.warning("No --since provided and could not determine first commit, defaulting to start of Unix epoch (1970-01-01 00:00:00).")
+    else:
+        since_dt = datetime.strptime(args.since, '%Y-%m-%dT%H:%M:%S') if 'T' in args.since else datetime.strptime(args.since, '%Y-%m-%d')
+    if not args.interval:
+        interval_td = until_dt - since_dt
+        args.interval = f"{interval_td.days}d"
+        log.info(f"Defaulting interval to {args.interval} based on --since and --until")
+    else:
+        interval_td = parse_interval(args.interval)
+    if not args.count:
+        args.count = 1
+    # Calculate intervals
+    results = []
+    for i in range(args.count):
+        interval_end = until_dt - i * interval_td
+        interval_start = interval_end - interval_td
+        # Stop if interval_start is before the user-specified or detected --since
+        if interval_start < since_dt:
+            log.info(f"Stopping interval generation: interval_start {interval_start} < since {since_dt}")
+            break
+        since_str = interval_start.strftime('%Y-%m-%dT%H:%M:%S')
+        until_str = interval_end.strftime('%Y-%m-%dT%H:%M:%S')
+        log.info(f"Collecting metrics for interval {since_str} to {until_str}")
+        metrics = dora_metrics_for_range(args.repo, args.tag, args.branch, since_str, until_str, log)
+        results.append({
+            'interval_start': since_str,
+            'interval_end': until_str,
+            **metrics
+        })
+    results.reverse()  # earliest interval first
+    # Write CSV
+    csv_file = args.csv or 'dora_report.csv'
+    with open(csv_file, 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=[
+            'interval_start', 'interval_end', 'deployment_frequency', 'change_failure_rate', 'mttr', 'mean_lead_time', 'deployment_count', 'total_merges'
+        ])
+        writer.writeheader()
+        for row in results:
+            writer.writerow(row)
+    print(f"CSV report written to {csv_file}")
+    log.info(f"CSV report written to {csv_file}")
 
 if __name__ == '__main__':
     main()
