@@ -1,0 +1,64 @@
+name: CI Workflow
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+jobs:
+  test-and-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest flake8 faker
+
+      - name: Run pytest
+        run: pytest
+
+      - name: Run linter
+        run: flake8 .
+
+  tag-version:
+    needs: test-and-lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Git
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+      - name: Get current tags
+        id: get-tags
+        run: |
+          git fetch --tags
+          latest_tag=$(git tag | grep build- | sed 's/build-//g' | sort -n | tail -n 1)
+          echo "latest_tag=$latest_tag" >> $GITHUB_ENV
+
+      - name: Create new tag
+        run: |
+          if [ -z "${{ env.latest_tag }}" ]; then
+            NEW_TAG="build-1"
+          else
+            VERSION=$((env.latest_tag + 1))
+            NEW_TAG="build-${VERSION}"
+          fi
+          git tag $NEW_TAG
+          git push origin $NEW_TAG
