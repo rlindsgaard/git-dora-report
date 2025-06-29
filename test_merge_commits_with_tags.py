@@ -1,7 +1,7 @@
 import subprocess
 import logging
 import pytest
-from merge_commits_with_tags import get_merge_commits, classify_tag_state
+from merge_commits_with_tags import get_merge_commits, classify_tag_state, classify_merge_states, calculate_lead_times, aggregate_dora_metrics
 
 @pytest.fixture(autouse=True, scope='session')
 def set_debug_logging():
@@ -110,3 +110,38 @@ def test_pipeline_tag_classification_integration(tmp_path, good_feature, bad_fea
         states.append(state)
         prev_state = state if state != 'recovery' else 'success'
     assert states == ['failed', 'recovery', 'success']
+
+def test_classify_merge_states_basic():
+    merges = [
+        {'tags': [], 'timestamp': 100},
+        {'tags': ['build-1'], 'timestamp': 200},
+        {'tags': ['build-2'], 'timestamp': 300},
+    ]
+    states, times, recovery_times = classify_merge_states(merges, 'build-*', log=None)
+    assert states == ['failed', 'recovery', 'success']
+    assert times == [200, 300]
+    assert recovery_times == [200 - 100]
+
+def test_calculate_lead_times(monkeypatch):
+    merges = [
+        {'hash': 'a', 'timestamp': 200},
+        {'hash': 'b', 'timestamp': 300},
+    ]
+    # Patch get_first_commit_time_of_branch to return fixed values
+    from merge_commits_with_tags import get_first_commit_time_of_branch
+    monkeypatch.setattr('merge_commits_with_tags.get_first_commit_time_of_branch', lambda repo, h, log=None: 100 if h == 'a' else 250)
+    lead_times = calculate_lead_times(merges, repo='irrelevant', log=None)
+    assert lead_times == [100, 50]
+
+def test_aggregate_dora_metrics():
+    states = ['failed', 'recovery', 'success']
+    times = [200, 300]
+    recovery_times = [100]
+    lead_times = [100, 50]
+    metrics = aggregate_dora_metrics(states, times, recovery_times, lead_times)
+    assert metrics['deployment_count'] == 2  # recovery + success
+    assert metrics['total_merges'] == 3
+    assert metrics['change_failure_rate'] == 1/3
+    assert metrics['deployment_frequency'] == 2 / ((300-200)/86400)
+    assert metrics['mttr'] == 100
+    assert metrics['mean_lead_time'] == 75

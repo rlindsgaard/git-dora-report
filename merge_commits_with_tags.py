@@ -122,22 +122,16 @@ def parse_interval(interval_str):
     else:
         raise ValueError('Invalid interval format. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)')
 
-def dora_metrics_for_range(repo, tag, branch, since, until, log):
-    merges = get_merge_commits(repo, since, until, tag, branch, log=log)
+def classify_merge_states(merges, tag_pattern, log):
+    """Classify the state for each merge commit as 'success', 'failed', or 'recovery'."""
     prev_state = 'failed'
     states = []
     times = []
     last_success_time = None
     last_failed_time = None
     recovery_times = []
-    lead_times = []
     for m in merges:
-        state = classify_tag_state(m['tags'], tag, prev_state)
-        # Lead time calculation
-        first_commit_time = get_first_commit_time_of_branch(repo, m['hash'], log=log)
-        if first_commit_time:
-            lead_time = m['timestamp'] - first_commit_time
-            lead_times.append(lead_time)
+        state = classify_tag_state(m['tags'], tag_pattern, prev_state)
         states.append(state)
         if state in ['success', 'recovery']:
             times.append(m['timestamp'])
@@ -148,6 +142,20 @@ def dora_metrics_for_range(repo, tag, branch, since, until, log):
         if state in ['success', 'recovery']:
             last_success_time = m['timestamp']
         prev_state = state if state != 'recovery' else 'success'
+    return states, times, recovery_times
+
+def calculate_lead_times(merges, repo, log):
+    """Calculate lead times for each merge commit."""
+    lead_times = []
+    for m in merges:
+        first_commit_time = get_first_commit_time_of_branch(repo, m['hash'], log=log)
+        if first_commit_time:
+            lead_time = m['timestamp'] - first_commit_time
+            lead_times.append(lead_time)
+    return lead_times
+
+def aggregate_dora_metrics(states, times, recovery_times, lead_times):
+    """Aggregate DORA metrics from states and lead times."""
     deployment_count = states.count('success') + states.count('recovery')
     total_merges = len(states)
     change_failure_count = states.count('failed')
@@ -164,7 +172,15 @@ def dora_metrics_for_range(repo, tag, branch, since, until, log):
         'total_merges': total_merges
     }
 
-def main():
+def dora_metrics_for_range(repo, tag, branch, since, until, log):
+    """Compute DORA metrics for a given range using helper functions."""
+    merges = get_merge_commits(repo, since, until, tag, branch, log=log)
+    states, times, recovery_times = classify_merge_states(merges, tag, log)
+    lead_times = calculate_lead_times(merges, repo, log)
+    return aggregate_dora_metrics(states, times, recovery_times, lead_times)
+
+def parse_args():
+    """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description='Generate DORA metrics from merge commits in a git repo.')
     parser.add_argument('repo', help='Path to the git repository')
     parser.add_argument('--since', required=False, default=None, help='Start date (e.g., "2024-01-01"). Defaults to the beginning of history.')
@@ -176,20 +192,52 @@ def main():
     parser.add_argument('--count', required=False, type=int, default=None, help='Number of intervals')
     parser.add_argument('--csv', required=False, default=None, help='CSV output file')
     parser.add_argument('--ma', required=False, type=int, default=3, help='Moving average window (number of intervals, default 3, simple)')
-    args = parser.parse_args()
+    return parser.parse_args()
 
-    print(args)
-    # Set up logging
+def setup_logging(verbosity: int) -> logging.Logger:
+    """Set up logging based on verbosity level."""
     log_level = logging.WARNING
-    if args.verbose == 1:
+    if verbosity == 1:
         log_level = logging.INFO
-    elif args.verbose >= 2:
+    elif verbosity >= 2:
         log_level = logging.DEBUG
     logging.basicConfig(level=log_level, format='[%(levelname)s] %(message)s')
     log = logging.getLogger("dora-metrics")
-    log.info(f"Verbosity set to {args.verbose}")
+    log.info(f"Verbosity set to {verbosity}")
+    return log
 
-    # Always use interval logic
+def generate_intervals(since_dt, until_dt, interval_td, count, log):
+    """Generate a list of (interval_start, interval_end) tuples for reporting."""
+    intervals = []
+    for i in range(count):
+        interval_end = until_dt - i * interval_td
+        interval_start = interval_end - interval_td
+        if interval_start < since_dt:
+            log.info(f"Stopping interval generation: interval_start {interval_start} < since {since_dt}")
+            break
+        intervals.append((interval_start, interval_end))
+    intervals.reverse()  # earliest interval first
+    return intervals
+
+def write_csv_report(results, csv_file, ma_fields, ma_fieldnames):
+    """Write the DORA metrics and moving averages to a CSV file."""
+    with open(csv_file, 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=[
+            'interval_start', 'interval_end',
+            'deployment_frequency', 'change_failure_rate', 'mttr', 'mean_lead_time', 'deployment_count', 'total_merges',
+            *ma_fieldnames
+        ])
+        writer.writeheader()
+        for row in results:
+            writer.writerow(row)
+
+def main():
+    """Main entry point for DORA metrics reporting."""
+    args = parse_args()
+    log = setup_logging(args.verbose)
+    print(args)
+
+    # Parse date arguments
     if not args.until:
         until_dt = datetime.now()
     else:
@@ -199,7 +247,6 @@ def main():
         cmd = ['git', '-C', args.repo, 'rev-list', '--max-parents=0', '--reverse', '--timestamp', 'HEAD']
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode == 0 and result.stdout.strip():
-            # Output format: <timestamp> <commit_hash>
             first_line = result.stdout.strip().split('\n')[0]
             first_timestamp = int(first_line.split()[0])
             since_dt = datetime.fromtimestamp(first_timestamp)
@@ -209,6 +256,8 @@ def main():
             log.warning("No --since provided and could not determine first commit, defaulting to start of Unix epoch (1970-01-01 00:00:00).")
     else:
         since_dt = datetime.strptime(args.since, '%Y-%m-%dT%H:%M:%S') if 'T' in args.since else datetime.strptime(args.since, '%Y-%m-%d')
+
+    # Determine interval size
     if not args.interval:
         interval_td = until_dt - since_dt
         args.interval = f"{interval_td.days}d"
@@ -217,15 +266,13 @@ def main():
         interval_td = parse_interval(args.interval)
     if not args.count:
         args.count = 1
-    # Calculate intervals
+
+    # Generate intervals
+    intervals = generate_intervals(since_dt, until_dt, interval_td, args.count, log)
+
+    # Collect metrics for each interval
     results = []
-    for i in range(args.count):
-        interval_end = until_dt - i * interval_td
-        interval_start = interval_end - interval_td
-        # Stop if interval_start is before the user-specified or detected --since
-        if interval_start < since_dt:
-            log.info(f"Stopping interval generation: interval_start {interval_start} < since {since_dt}")
-            break
+    for interval_start, interval_end in intervals:
         since_str = interval_start.strftime('%Y-%m-%dT%H:%M:%S')
         until_str = interval_end.strftime('%Y-%m-%dT%H:%M:%S')
         log.info(f"Collecting metrics for interval {since_str} to {until_str}")
@@ -235,9 +282,7 @@ def main():
             'interval_end': until_str,
             **metrics
         })
-    results.reverse()  # earliest interval first
-    # Write CSV
-    csv_file = args.csv or 'dora_report.csv'
+
     # Compute simple moving averages if requested
     ma_fields = ['deployment_frequency', 'change_failure_rate', 'mttr', 'mean_lead_time', 'deployment_count', 'total_merges']
     if args.ma and args.ma > 1:
@@ -248,22 +293,20 @@ def main():
                 vals = [row[field] for row in window]
                 avg = sum(vals) / len(vals) if vals else 0
                 ma_values.append(avg)
-            for i, avg in enumerate(ma_values):
-                results[i][f'{field}_ma'] = avg
-        ma_fieldnames = [f'{field}_ma' for field in ma_fields]
-    else:
-        ma_fieldnames = []
-    with open(csv_file, 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=[
-            'interval_start', 'interval_end',
-            'deployment_frequency', 'change_failure_rate', 'mttr', 'mean_lead_time', 'deployment_count', 'total_merges',
-            *ma_fieldnames
-        ])
-        writer.writeheader()
-        for row in results:
-            writer.writerow(row)
-    print(f"CSV report written to {csv_file}")
-    log.info(f"CSV report written to {csv_file}")
+            # Add moving average fields to results
+            for i in range(len(results)):
+                results[i][f'ma_{field}'] = ma_values[i]
 
-if __name__ == '__main__':
+    # Write CSV report if requested
+    if args.csv:
+        write_csv_report(results, args.csv, ma_fields, [f'ma_{field}' for field in ma_fields])
+
+    # Print results to console
+    headers = ['Interval Start', 'Interval End', 'Deployment Frequency', 'Change Failure Rate', 'MTTR', 'Mean Lead Time', 'Deployment Count', 'Total Merges']
+    ma_headers = [f'MA {field}' for field in ma_fields]
+    print(f"{' | '.join(headers + ma_headers)}")
+    for row in results:
+        print(" | ".join(f"{row[h]:.2f}" if isinstance(row[h], (int, float)) else str(row[h]) for h in headers + ma_headers))
+
+if __name__ == "__main__":
     main()
