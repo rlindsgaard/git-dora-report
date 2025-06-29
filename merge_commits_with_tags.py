@@ -122,22 +122,16 @@ def parse_interval(interval_str):
     else:
         raise ValueError('Invalid interval format. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)')
 
-def dora_metrics_for_range(repo, tag, branch, since, until, log):
-    merges = get_merge_commits(repo, since, until, tag, branch, log=log)
+def classify_merge_states(merges, tag_pattern, log):
+    """Classify the state for each merge commit as 'success', 'failed', or 'recovery'."""
     prev_state = 'failed'
     states = []
     times = []
     last_success_time = None
     last_failed_time = None
     recovery_times = []
-    lead_times = []
     for m in merges:
-        state = classify_tag_state(m['tags'], tag, prev_state)
-        # Lead time calculation
-        first_commit_time = get_first_commit_time_of_branch(repo, m['hash'], log=log)
-        if first_commit_time:
-            lead_time = m['timestamp'] - first_commit_time
-            lead_times.append(lead_time)
+        state = classify_tag_state(m['tags'], tag_pattern, prev_state)
         states.append(state)
         if state in ['success', 'recovery']:
             times.append(m['timestamp'])
@@ -148,6 +142,20 @@ def dora_metrics_for_range(repo, tag, branch, since, until, log):
         if state in ['success', 'recovery']:
             last_success_time = m['timestamp']
         prev_state = state if state != 'recovery' else 'success'
+    return states, times, recovery_times
+
+def calculate_lead_times(merges, repo, log):
+    """Calculate lead times for each merge commit."""
+    lead_times = []
+    for m in merges:
+        first_commit_time = get_first_commit_time_of_branch(repo, m['hash'], log=log)
+        if first_commit_time:
+            lead_time = m['timestamp'] - first_commit_time
+            lead_times.append(lead_time)
+    return lead_times
+
+def aggregate_dora_metrics(states, times, recovery_times, lead_times):
+    """Aggregate DORA metrics from states and lead times."""
     deployment_count = states.count('success') + states.count('recovery')
     total_merges = len(states)
     change_failure_count = states.count('failed')
@@ -163,6 +171,13 @@ def dora_metrics_for_range(repo, tag, branch, since, until, log):
         'deployment_count': deployment_count,
         'total_merges': total_merges
     }
+
+def dora_metrics_for_range(repo, tag, branch, since, until, log):
+    """Compute DORA metrics for a given range using helper functions."""
+    merges = get_merge_commits(repo, since, until, tag, branch, log=log)
+    states, times, recovery_times = classify_merge_states(merges, tag, log)
+    lead_times = calculate_lead_times(merges, repo, log)
+    return aggregate_dora_metrics(states, times, recovery_times, lead_times)
 
 def parse_args():
     """Parse command-line arguments."""
