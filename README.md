@@ -33,3 +33,4 @@ This really needs an external data point. There is no external collectors so we 
 - Exceptional conditions should be covered by unit tests
 - main function should be covered by at least one integration/end-to-end test
 - Prefer to use literal values when asserting during tests
+- Use convential commits to format commit messages
