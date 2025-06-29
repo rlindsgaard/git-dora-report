@@ -26,7 +26,7 @@ This really needs an external data point. There is no external collectors so we 
 - Write appropriate log messages
 - Use docstrings and PEP287 to explain functionality
 - Inline document complicated code
-- Lint using isort, black, and flake8 in that order
+- Lint using isort and in that order
 - Use pytest
 - Ensure test-suite passes for new changes
 - Prefer using mocks, fixtures and fakers for conducting unit tests
