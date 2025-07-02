@@ -212,7 +212,7 @@ def aggregate_dora_metrics(states, times, recovery_times, lead_times, interval_d
     deployment_count = states.count("success") + states.count("recovery")
     total_merges = len(states)
     change_failure_count = states.count("failed")
-    deployment_frequency = deployment_count / ((times[-1] - times[0]) / (86400 * interval_days))
+    deployment_frequency = deployment_count / ((times[-1] - times[0]) / (86400.0 * interval_days))
     change_failure_rate = change_failure_count / total_merges if total_merges else 0
     mttr = statistics.mean(recovery_times) if recovery_times else 0
     mean_lead_time = statistics.mean(lead_times) if lead_times else 0
