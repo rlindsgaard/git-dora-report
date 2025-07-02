@@ -160,7 +160,7 @@ def test_deployment_frequency_single_day():
     metrics = aggregate_dora_metrics(states, times, recovery_times, lead_times)
     assert metrics["deployment_frequency"] == 3 / 1  # Three deployments in one day
 
- def test_deployment_frequency_two_weeks():
+def test_deployment_frequency_two_weeks():
     states = ["success", "success", "success"]  # Three deployments
     times = [0, 1209600]  # Interval: Two weeks (start and end timestamps)
     recovery_times = []
