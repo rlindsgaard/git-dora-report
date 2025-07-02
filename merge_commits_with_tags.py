@@ -167,16 +167,13 @@ def get_first_commit_time_of_branch(
 
 def parse_interval(interval_str):
     if interval_str.endswith("d"):
-        return timedelta(days=int(interval_str[:-1]))
+        return int(interval_str[:-1])  # Days
     elif interval_str.endswith("w"):
-        return timedelta(weeks=int(interval_str[:-1]))
+        return int(interval_str[:-1]) * 7  # Weeks converted to days
     elif interval_str.endswith("m"):
-        # Approximate a month as 30 days
-        return timedelta(days=30 * int(interval_str[:-1]))
+        return int(interval_str[:-1]) * 30  # Approximate months as 30 days
     else:
-        raise ValueError(
-            "Invalid interval format. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)"  # noqa: E501
-        )
+        raise ValueError("Invalid interval format. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)")
 
 
 def classify_merge_states(merges, tag_pattern, log):
