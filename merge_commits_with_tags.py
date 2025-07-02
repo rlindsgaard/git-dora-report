@@ -167,16 +167,13 @@ def get_first_commit_time_of_branch(
 
 def parse_interval(interval_str):
     if interval_str.endswith("d"):
-        return timedelta(days=int(interval_str[:-1]))
+        return int(interval_str[:-1])  # Days
     elif interval_str.endswith("w"):
-        return timedelta(weeks=int(interval_str[:-1]))
+        return int(interval_str[:-1]) * 7  # Weeks converted to days
     elif interval_str.endswith("m"):
-        # Approximate a month as 30 days
-        return timedelta(days=30 * int(interval_str[:-1]))
+        return int(interval_str[:-1]) * 30  # Approximate months as 30 days
     else:
-        raise ValueError(
-            "Invalid interval format. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)"  # noqa: E501
-        )
+        raise ValueError("Invalid interval format. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)")
 
 
 def classify_merge_states(merges, tag_pattern, log):
@@ -210,16 +207,12 @@ def calculate_lead_times(merges, repo, log):
     return lead_times
 
 
-def aggregate_dora_metrics(states, times, recovery_times, lead_times):
+def aggregate_dora_metrics(states, times, recovery_times, lead_times, interval_days):
     """Aggregate DORA metrics from states and lead times."""
     deployment_count = states.count("success") + states.count("recovery")
     total_merges = len(states)
     change_failure_count = states.count("failed")
-    deployment_frequency = (
-        deployment_count / ((times[-1] - times[0]) / 86400)
-        if len(times) > 1
-        else deployment_count
-    )
+    deployment_frequency = deployment_count / ((times[-1] - times[0]) / (86400 * interval_days))
     change_failure_rate = change_failure_count / total_merges if total_merges else 0
     mttr = statistics.mean(recovery_times) if recovery_times else 0
     mean_lead_time = statistics.mean(lead_times) if lead_times else 0
@@ -233,12 +226,12 @@ def aggregate_dora_metrics(states, times, recovery_times, lead_times):
     }
 
 
-def dora_metrics_for_range(repo, tag, branch, since, until, log):
+def dora_metrics_for_range(repo, tag, branch, since, until, log, interval_days):
     """Compute DORA metrics for a given range using helper functions."""
     merges = get_merge_commits(repo, since, until, tag, branch, log=log)
     states, times, recovery_times = classify_merge_states(merges, tag, log)
     lead_times = calculate_lead_times(merges, repo, log)
-    return aggregate_dora_metrics(states, times, recovery_times, lead_times)
+    return aggregate_dora_metrics(states, times, recovery_times, lead_times, interval_days)
 
 
 def parse_args():
@@ -320,8 +313,8 @@ def generate_intervals(since_dt, until_dt, interval_td, count, log):
     """Generate a list of (interval_start, interval_end) tuples for reporting."""
     intervals = []
     for i in range(count):
-        interval_end = until_dt - i * interval_td
-        interval_start = interval_end - interval_td
+        interval_end = until_dt - i * (interval_td*86400.0)
+        interval_start = interval_end - (interval_td*86400.0)
         if interval_start < since_dt:
             log.info(
                 f"Stopping interval generation: interval_start {interval_start} < since {since_dt}"  # noqa: E501
@@ -421,7 +414,7 @@ def main():
         until_str = interval_end.strftime("%Y-%m-%dT%H:%M:%S")
         log.info(f"Collecting metrics for interval {since_str} to {until_str}")
         metrics = dora_metrics_for_range(
-            args.repo, args.tag, args.branch, since_str, until_str, log
+            args.repo, args.tag, args.branch, since_str, until_str, log, interval_td
         )
         results.append(
             {"interval_start": since_str, "interval_end": until_str, **metrics}
