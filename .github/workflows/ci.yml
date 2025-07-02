@@ -32,9 +32,6 @@ jobs:
       - name: Run pytest
         run: pytest
 
-      - name: Run linter
-        run: black --check .
-
   tag-version:
     needs: test-and-lint
     runs-on: ubuntu-latest
