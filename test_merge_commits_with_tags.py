@@ -197,7 +197,7 @@ def test_aggregate_dora_metrics():
     times = [200, 300]
     recovery_times = [100]
     lead_times = [100, 50]
-    metrics = aggregate_dora_metrics(states, times, recovery_times, lead_times)
+    metrics = aggregate_dora_metrics(states, times, recovery_times, lead_times, 1)
     assert metrics["deployment_count"] == 2  # recovery + success
     assert metrics["total_merges"] == 3
     assert metrics["change_failure_rate"] == 1 / 3
