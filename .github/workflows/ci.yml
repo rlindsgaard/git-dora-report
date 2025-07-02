@@ -7,6 +7,9 @@ on:
   push:
     branches:
       - master
+  
+permissions:
+  contents: write
 
 jobs:
   test-and-lint:
@@ -53,6 +56,8 @@ jobs:
           echo "latest_tag=$latest_tag" >> $GITHUB_ENV
 
       - name: Create new tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ -z "${{ env.latest_tag }}" ]; then
             NEW_TAG="build-1"
