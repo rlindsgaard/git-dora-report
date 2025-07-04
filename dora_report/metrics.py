@@ -17,3 +17,21 @@ def change_frequency(change_events: list[ChangeEvent], duration: timedelta) -> f
         raise ValueError("Duration cannot be zero.")
 
     return len(change_events) / duration.total_seconds()
+
+
+def change_failure_rate(change_events: list[ChangeEvent]) -> float:
+    """
+    Calculate the change failure rate.
+
+    :param change_events: A list of ChangeEvent objects.
+    :type change_events: list[ChangeEvent]
+    :return: The failure rate (number of failed changes divided by total changes).
+    :rtype: float
+    """
+    if not change_events:
+        return 0.0
+
+    total_events = len(change_events)
+    failed_events = sum(1 for event in change_events if not event.success)
+
+    return failed_events / total_events 
