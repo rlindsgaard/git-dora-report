@@ -4,6 +4,7 @@ from dora_report.models import ChangeEvent
 from dora_report.metrics import (
     change_frequency, 
     change_failure_rate,
+    mean_time_to_recover,
 ) 
 
 @pytest.mark.parametrize(
@@ -133,3 +134,56 @@ def test_change_failure_rate(change_events, expected):
     Test the change_failure_rate function with a variety of inputs.
     """
     assert change_failure_rate(change_events) == pytest.approx(expected)
+
+
+@pytest.mark.parametrize(
+    "change_events, expected_mean_recovery_time",
+    [
+        # Case 1: All events are successful (MTTR = 0)
+        (
+            [
+                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=True, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 2, 12, 0, 0), success=True, lead_time=timedelta(seconds=3600)),
+            ],
+            timedelta(0),
+        ),
+
+        # Case 2: Mean recovery time of 15 minutes
+        (
+            [
+                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=True, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 1, 12, 5, 0), success=False, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="3", stamp=datetime(2023, 1, 1, 12, 20, 0), success=True, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="4", stamp=datetime(2023, 1, 1, 12, 25, 0), success=False, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="5", stamp=datetime(2023, 1, 1, 12, 40, 0), success=True, lead_time=timedelta(seconds=3600)),
+            ],
+            timedelta(minutes=15),
+        ),
+
+        # Case 3: No events are successful (MTTR = 0)
+        (
+            [
+                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=False, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 1, 12, 10, 0), success=False, lead_time=timedelta(seconds=3600)),
+            ],
+            timedelta(0),
+        ),
+
+        # Case 4: Mean recovery time with failing change events at the end
+        (
+            [
+                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=True, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 1, 12, 10, 0), success=False, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="3", stamp=datetime(2023, 1, 1, 12, 20, 0), success=True, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="4", stamp=datetime(2023, 1, 1, 12, 30, 0), success=False, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="5", stamp=datetime(2023, 1, 1, 12, 40, 0), success=False, lead_time=timedelta(seconds=3600)),
+            ],
+            timedelta(minutes=10),
+        ),
+    ],
+)
+def test_mean_time_to_recover(change_events, expected_mean_recovery_time):
+    """
+    Test the mean_time_to_recover function with various scenarios.
+    """
+    assert mean_time_to_recover(change_events) == expected_mean_recovery_time 
