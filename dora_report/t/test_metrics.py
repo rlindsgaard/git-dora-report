@@ -33,7 +33,7 @@ from dora_report.metrics import change_frequency
                 )
             ], 
             timedelta(days=1), 
-            0.0000115741
+            0.00001157407407
         ),
 
         # Seven ChangeEvents
@@ -48,7 +48,7 @@ from dora_report.metrics import change_frequency
                 for i in range(7)
             ], 
             timedelta(days=7), 
-            7 / (7 * 86400)
+            0.00001157407407
         ),
         (
             [
@@ -61,7 +61,7 @@ from dora_report.metrics import change_frequency
                 for i in range(7)
             ], 
             timedelta(days=1), 
-            0.0000810185
+            0.00008101851852
         ),
     ],
 )
