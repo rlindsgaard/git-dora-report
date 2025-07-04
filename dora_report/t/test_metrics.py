@@ -115,7 +115,7 @@ def test_change_frequency_zero_duration():
                 ChangeEvent(identifier="6", stamp=datetime(2023, 1, 6, 12, 0, 0), success=True, lead_time=timedelta(seconds=3600)),
                 ChangeEvent(identifier="7", stamp=datetime(2023, 1, 7, 12, 0, 0), success=True, lead_time=timedelta(seconds=7200)),
             ],
-            0.42
+            0.42857142
         ),
 
         # No failures (failure rate = 0)
