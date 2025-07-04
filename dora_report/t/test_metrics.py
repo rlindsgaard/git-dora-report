@@ -14,7 +14,7 @@ from dora_report.metrics import change_frequency
         (
             [
                 ChangeEvent(
-                    id="1", 
+                    identifier="1", 
                     stamp=datetime(2023, 1, 1, 12, 0, 0), 
                     success=True,
                     lead_time=timedelta(seconds=3600)
@@ -24,11 +24,45 @@ from dora_report.metrics import change_frequency
             0.00000165344
         ),
         (
-            [ChangeEvent(id="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=True, lead_time=timedelta(seconds=3600))], timedelta(days=1), 0.0000115741),
+            [
+                ChangeEvent(
+                    identifier="1", 
+                    stamp=datetime(2023, 1, 1, 12, 0, 0), 
+                    success=True, 
+                    lead_time=timedelta(seconds=3600)
+                )
+            ], 
+            timedelta(days=1), 
+            0.0000115741
+        ),
 
         # Seven ChangeEvents
-        ([ChangeEvent(id=str(i), stamp=datetime(2023, 1, 1, 12, 0, 0), success=True, lead_time=timedelta(seconds=3600)) for i in range(7)], timedelta(days=7), 7 / (7 * 86400)),
-        ([ChangeEvent(id=str(i), stamp=datetime(2023, 1, 1, 12, 0, 0), success=True, lead_time=timedelta(seconds=3600)) for i in range(7)], timedelta(days=1), 0.0000810185),
+        (
+            [
+                ChangeEvent(
+                    identifier=str(i), 
+                    stamp=datetime(2023, 1, 1, 12, 0, 0), 
+                    success=True, 
+                    lead_time=timedelta(seconds=3600)
+                ) 
+                for i in range(7)
+            ], 
+            timedelta(days=7), 
+            7 / (7 * 86400)
+        ),
+        (
+            [
+                ChangeEvent(
+                    identifier=str(i), 
+                    stamp=datetime(2023, 1, 1, 12, 0, 0), 
+                    success=True, 
+                    lead_time=timedelta(seconds=3600)
+                ) 
+                for i in range(7)
+            ], 
+            timedelta(days=1), 
+            0.0000810185
+        ),
     ],
 )
 def test_change_frequency(change_events, duration, expected):
