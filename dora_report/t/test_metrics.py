@@ -23,7 +23,6 @@ def change_event_factory():
             identifier=fake.uuid4(),
             stamp=base_time,
             success=success,
-            ),
         )
         base_time += timedelta(seconds=increment_seconds)  # Increment timestamp
         return event
