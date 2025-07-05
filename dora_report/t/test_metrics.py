@@ -5,7 +5,31 @@ from dora_report.metrics import (
     change_frequency, 
     change_failure_rate,
     mean_time_to_recover,
-) 
+    lead_time_for_changes,
+)
+from faker import Faker
+
+@pytest.fixture
+def change_event_factory():
+    """
+    A pytest fixture for generating a ChangeEvent factory with consecutive timestamps.
+    """
+    fake = Faker()
+    base_time = fake.date_time_this_year()  # Start with a random timestamp
+
+    def factory(success: bool, lead_time_seconds: int = 3600, increment_seconds: int = 300):
+        nonlocal base_time
+        event = ChangeEvent(
+            identifier=fake.uuid4(),
+            stamp=base_time,
+            success=success,
+            lead_time=timedelta(seconds=lead_time_seconds),
+        )
+        base_time += timedelta(seconds=increment_seconds)  # Increment timestamp
+        return event
+
+    return factory
+
 
 @pytest.mark.parametrize(
     "change_events, duration, expected",
@@ -134,6 +158,71 @@ def test_change_failure_rate(change_events, expected):
     Test the change_failure_rate function with a variety of inputs.
     """
     assert change_failure_rate(change_events) == pytest.approx(expected)
+ 
+
+@pytest.mark.parametrize(
+    "change_events, expected_mean_lead_time",
+    [
+        # Case 1: No succeeding changes (all failures, mean = 0)
+        (
+            [
+                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=False, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 1, 12, 30, 0), success=False, lead_time=timedelta(seconds=3600)),
+            ],
+            timedelta(0),
+        ),
+
+        # Case 2: Multiple consecutive successes (mean = 0 because no failures in chunks)
+        (
+            [
+                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=True, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 1, 12, 30, 0), success=True, lead_time=timedelta(seconds=3600)),
+            ],
+            timedelta(0),
+        ),
+
+        # Case 3: Multiple failures between successes
+        (
+            [
+                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=False, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 1, 12, 30, 0), success=False, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="3", stamp=datetime(2023, 1, 1, 13, 0, 0), success=True, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="4", stamp=datetime(2023, 1, 1, 13, 30, 0), success=False, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="5", stamp=datetime(2023, 1, 1, 14, 0, 0), success=True, lead_time=timedelta(seconds=3600)),
+            ],
+            timedelta(minutes=45),  # Mean: (60 + 30) / 2 = 45 minutes
+        ),
+    ],
+)
+def test_lead_time_for_changes(change_events, expected_mean_lead_time):
+    """
+    Test the lead_time_for_changes function with various scenarios.
+    """
+    assert lead_time_for_changes(change_events) == expected_mean_lead_time
+    
+
+def test_lead_time_for_changes_with_fixture(change_event_factory):
+    """
+    Test the lead_time_for_changes function using a ChangeEvent factory.
+    """
+    # Generate test data using the factory
+    change_events = [
+        change_event_factory(success=False, increment_seconds=300),  # Event 1 (failure, +5 mins)
+        change_event_factory(success=False, increment_seconds=300),  # Event 2 (failure, +5 mins)
+        change_event_factory(success=True, increment_seconds=300),   # Event 3 (success, +5 mins)
+        change_event_factory(success=False, increment_seconds=300),  # Event 4 (failure, +5 mins)
+        change_event_factory(success=True, increment_seconds=300),   # Event 5 (success, +5 mins)
+    ]
+
+    # Calculate expected lead times:
+    # Chunk 1: Lead times = (T3-T1) and (T3-T2)
+    # Chunk 2: Lead time  = (T5-T4)
+    lead_time_chunk_1 = timedelta(seconds=300 + 300)  # 10 minutes
+    lead_time_chunk_2 = timedelta(seconds=300)        # 5 minutes
+    expected_mean_lead_time = (lead_time_chunk_1 + lead_time_chunk_2) / 3
+
+    # Assert the result
+    assert lead_time_for_changes(change_events) == expected_mean_lead_time 
 
 
 @pytest.mark.parametrize(
