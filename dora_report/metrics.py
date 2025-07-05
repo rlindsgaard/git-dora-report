@@ -69,3 +69,36 @@ def mean_time_to_recover(change_events: list[ChangeEvent]) -> timedelta:
 
     # Calculate the mean recovery time
     return sum(recovery_times, timedelta(0)) / len(recovery_times)
+
+ 
+def lead_time_for_changes(change_events: list[ChangeEvent]) -> timedelta:
+    """
+    Calculate the mean lead time for changes.
+
+    :param change_events: A list of ChangeEvent objects.
+    :type change_events: list[ChangeEvent]
+    :return: The mean lead time for all changes.
+    :rtype: timedelta
+    """
+    if not change_events:
+        return timedelta(0)
+
+    lead_times = []
+    chunk = []
+
+    # Iterate over the events and chunk them
+    for event in change_events:
+        chunk.append(event)
+        if event.success:  # A success marks the end of a chunk
+            if len(chunk) > 1:  # Only calculate if there was a failure before this success
+                success_stamp = event.stamp
+                for e in chunk[:-1]:  # Exclude the final successful event
+                    lead_times.append(success_stamp - e.stamp)
+            chunk = [event]  # Start a new chunk with the current success
+
+    # If no lead times were recorded, return 0
+    if not lead_times:
+        return timedelta(0)
+
+    # Calculate the mean lead time
+    return sum(lead_times, timedelta(0)) / len(lead_times) 
