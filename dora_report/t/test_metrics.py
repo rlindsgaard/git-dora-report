@@ -158,7 +158,60 @@ def test_change_failure_rate(change_events, expected):
     Test the change_failure_rate function with a variety of inputs.
     """
     assert change_failure_rate(change_events) == pytest.approx(expected)
- 
+
+
+@pytest.mark.parametrize(
+    "change_events, expected_mean_recovery_time",
+    [
+        # Case 1: All events are successful (MTTR = 0)
+        (
+            [
+                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=True, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 2, 12, 0, 0), success=True, lead_time=timedelta(seconds=3600)),
+            ],
+            timedelta(0),
+        ),
+
+        # Case 2: Mean recovery time of 15 minutes
+        (
+            [
+                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=True, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 1, 12, 5, 0), success=False, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="3", stamp=datetime(2023, 1, 1, 12, 20, 0), success=True, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="4", stamp=datetime(2023, 1, 1, 12, 25, 0), success=False, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="5", stamp=datetime(2023, 1, 1, 12, 40, 0), success=True, lead_time=timedelta(seconds=3600)),
+            ],
+            timedelta(minutes=15),
+        ),
+
+        # Case 3: No events are successful (MTTR = 0)
+        (
+            [
+                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=False, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 1, 12, 10, 0), success=False, lead_time=timedelta(seconds=3600)),
+            ],
+            timedelta(0),
+        ),
+
+        # Case 4: Mean recovery time with failing change events at the end
+        (
+            [
+                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=True, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 1, 12, 10, 0), success=False, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="3", stamp=datetime(2023, 1, 1, 12, 20, 0), success=True, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="4", stamp=datetime(2023, 1, 1, 12, 30, 0), success=False, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="5", stamp=datetime(2023, 1, 1, 12, 40, 0), success=False, lead_time=timedelta(seconds=3600)),
+            ],
+            timedelta(minutes=10),
+        ),
+    ],
+)
+def test_mean_time_to_recover(change_events, expected_mean_recovery_time):
+    """
+    Test the mean_time_to_recover function with various scenarios.
+    """
+    assert mean_time_to_recover(change_events) == expected_mean_recovery_time
+  
 
 @pytest.mark.parametrize(
     "change_events, expected_mean_lead_time",
@@ -223,27 +276,3 @@ def test_lead_time_for_changes_with_fixture(change_event_factory):
 
     # Assert the result
     assert lead_time_for_changes(change_events) == expected_mean_lead_time 
-
-
-def test_lead_time_for_changes_with_fixture(change_event_factory):
-    """
-    Test the lead_time_for_changes function using a ChangeEvent factory.
-    """
-    # Generate test data using the factory
-    change_events = [
-        change_event_factory(success=False, increment_seconds=300),  # Event 1 (failure, +5 mins)
-        change_event_factory(success=False, increment_seconds=300),  # Event 2 (failure, +5 mins)
-        change_event_factory(success=True, increment_seconds=300),   # Event 3 (success, +5 mins)
-        change_event_factory(success=False, increment_seconds=300),  # Event 4 (failure, +5 mins)
-        change_event_factory(success=True, increment_seconds=300),   # Event 5 (success, +5 mins)
-    ]
-
-    # Calculate expected lead times:
-    # Chunk 1: Lead times = (T3-T1) and (T3-T2)
-    # Chunk 2: Lead time  = (T5-T4)
-    lead_time_chunk_1 = timedelta(seconds=300 + 300)  # 10 minutes
-    lead_time_chunk_2 = timedelta(seconds=300)        # 5 minutes
-    expected_mean_lead_time = (lead_time_chunk_1 + lead_time_chunk_2) / 3
-
-    # Assert the result
-    assert lead_time_for_changes(change_events) == expected_mean_lead_time
