@@ -17,13 +17,13 @@ def change_event_factory():
     fake = Faker()
     base_time = fake.date_time_this_year()  # Start with a random timestamp
 
-    def factory(success: bool, lead_time_seconds: int = 3600, increment_seconds: int = 300):
+    def factory(success: bool, increment_seconds: int = 300):
         nonlocal base_time
         event = ChangeEvent(
             identifier=fake.uuid4(),
             stamp=base_time,
             success=success,
-            lead_time=timedelta(seconds=lead_time_seconds),
+            ),
         )
         base_time += timedelta(seconds=increment_seconds)  # Increment timestamp
         return event
@@ -45,7 +45,6 @@ def change_event_factory():
                     identifier="1", 
                     stamp=datetime(2023, 1, 1, 12, 0, 0), 
                     success=True,
-                    lead_time=timedelta(seconds=3600)
                 )
             ], 
             timedelta(days=7), 
@@ -56,8 +55,7 @@ def change_event_factory():
                 ChangeEvent(
                     identifier="1", 
                     stamp=datetime(2023, 1, 1, 12, 0, 0), 
-                    success=True, 
-                    lead_time=timedelta(seconds=3600)
+                    success=True,
                 )
             ], 
             timedelta(days=1), 
@@ -70,8 +68,7 @@ def change_event_factory():
                 ChangeEvent(
                     identifier=str(i), 
                     stamp=datetime(2023, 1, 1, 12, 0, 0), 
-                    success=True, 
-                    lead_time=timedelta(seconds=3600)
+                    success=True,
                 ) 
                 for i in range(7)
             ], 
@@ -83,8 +80,7 @@ def change_event_factory():
                 ChangeEvent(
                     identifier=str(i), 
                     stamp=datetime(2023, 1, 1, 12, 0, 0), 
-                    success=True, 
-                    lead_time=timedelta(seconds=3600)
+                    success=True,
                 ) 
                 for i in range(7)
             ], 
@@ -114,8 +110,8 @@ def test_change_frequency_zero_duration():
         # All changes fail (failure rate = 1)
         (
             [
-                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=False, lead_time=timedelta(seconds=3600)),
-                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 2, 12, 0, 0), success=False, lead_time=timedelta(seconds=7200)),
+                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=False),
+                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 2, 12, 0, 0), success=False),
             ],
             1.0
         ),
@@ -123,8 +119,8 @@ def test_change_frequency_zero_duration():
         # Half of the changes fail (failure rate = 0.5)
         (
             [
-                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=False, lead_time=timedelta(seconds=3600)),
-                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 2, 12, 0, 0), success=True, lead_time=timedelta(seconds=7200)),
+                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=False),
+                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 2, 12, 0, 0), success=True),
             ],
             0.5
         ),
@@ -132,13 +128,13 @@ def test_change_frequency_zero_duration():
         # 42% of the changes fail (failure rate ≈ 0.42)
         (
             [
-                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=False, lead_time=timedelta(seconds=3600)),
-                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 2, 12, 0, 0), success=True, lead_time=timedelta(seconds=7200)),
-                ChangeEvent(identifier="3", stamp=datetime(2023, 1, 3, 12, 0, 0), success=False, lead_time=timedelta(seconds=1800)),
-                ChangeEvent(identifier="4", stamp=datetime(2023, 1, 4, 12, 0, 0), success=True, lead_time=timedelta(seconds=4500)),
-                ChangeEvent(identifier="5", stamp=datetime(2023, 1, 5, 12, 0, 0), success=False, lead_time=timedelta(seconds=5400)),
-                ChangeEvent(identifier="6", stamp=datetime(2023, 1, 6, 12, 0, 0), success=True, lead_time=timedelta(seconds=3600)),
-                ChangeEvent(identifier="7", stamp=datetime(2023, 1, 7, 12, 0, 0), success=True, lead_time=timedelta(seconds=7200)),
+                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=False),
+                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 2, 12, 0, 0), success=True),
+                ChangeEvent(identifier="3", stamp=datetime(2023, 1, 3, 12, 0, 0), success=False),
+                ChangeEvent(identifier="4", stamp=datetime(2023, 1, 4, 12, 0, 0), success=True),
+                ChangeEvent(identifier="5", stamp=datetime(2023, 1, 5, 12, 0, 0), success=False)),
+                ChangeEvent(identifier="6", stamp=datetime(2023, 1, 6, 12, 0, 0), success=True),
+                ChangeEvent(identifier="7", stamp=datetime(2023, 1, 7, 12, 0, 0), success=True),
             ],
             0.42857142
         ),
@@ -146,8 +142,8 @@ def test_change_frequency_zero_duration():
         # No failures (failure rate = 0)
         (
             [
-                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=True, lead_time=timedelta(seconds=3600)),
-                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 2, 12, 0, 0), success=True, lead_time=timedelta(seconds=7200)),
+                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=True),
+                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 2, 12, 0, 0), success=True),
             ],
             0.0
         ),
@@ -159,15 +155,23 @@ def test_change_failure_rate(change_events, expected):
     """
     assert change_failure_rate(change_events) == pytest.approx(expected)
 
-
 @pytest.mark.parametrize(
     "change_events, expected_mean_recovery_time",
     [
+        # Case with None values
+        (
+            [
+                ChangeEvent("1", datetime(2023, 1, 1, 12, 0, 0), None),
+                ChangeEvent("2", datetime(2023, 1, 1, 12, 10, 0), False),
+                ChangeEvent("3", datetime(2023, 1, 1, 12, 20, 0), True),
+            ],
+            timedelta(minutes=10),
+        ),
         # Case 1: All events are successful (MTTR = 0)
         (
             [
-                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=True, lead_time=timedelta(seconds=3600)),
-                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 2, 12, 0, 0), success=True, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=True),
+                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 2, 12, 0, 0), success=True),
             ],
             timedelta(0),
         ),
@@ -175,11 +179,11 @@ def test_change_failure_rate(change_events, expected):
         # Case 2: Mean recovery time of 15 minutes
         (
             [
-                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=True, lead_time=timedelta(seconds=3600)),
-                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 1, 12, 5, 0), success=False, lead_time=timedelta(seconds=3600)),
-                ChangeEvent(identifier="3", stamp=datetime(2023, 1, 1, 12, 20, 0), success=True, lead_time=timedelta(seconds=3600)),
-                ChangeEvent(identifier="4", stamp=datetime(2023, 1, 1, 12, 25, 0), success=False, lead_time=timedelta(seconds=3600)),
-                ChangeEvent(identifier="5", stamp=datetime(2023, 1, 1, 12, 40, 0), success=True, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=True),
+                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 1, 12, 5, 0), success=False),
+                ChangeEvent(identifier="3", stamp=datetime(2023, 1, 1, 12, 20, 0), success=True),
+                ChangeEvent(identifier="4", stamp=datetime(2023, 1, 1, 12, 25, 0), success=False),
+                ChangeEvent(identifier="5", stamp=datetime(2023, 1, 1, 12, 40, 0), success=True),
             ],
             timedelta(minutes=15),
         ),
@@ -187,8 +191,8 @@ def test_change_failure_rate(change_events, expected):
         # Case 3: No events are successful (MTTR = 0)
         (
             [
-                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=False, lead_time=timedelta(seconds=3600)),
-                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 1, 12, 10, 0), success=False, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=False),
+                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 1, 12, 10, 0), success=False),
             ],
             timedelta(0),
         ),
@@ -196,11 +200,11 @@ def test_change_failure_rate(change_events, expected):
         # Case 4: Mean recovery time with failing change events at the end
         (
             [
-                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=True, lead_time=timedelta(seconds=3600)),
-                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 1, 12, 10, 0), success=False, lead_time=timedelta(seconds=3600)),
-                ChangeEvent(identifier="3", stamp=datetime(2023, 1, 1, 12, 20, 0), success=True, lead_time=timedelta(seconds=3600)),
-                ChangeEvent(identifier="4", stamp=datetime(2023, 1, 1, 12, 30, 0), success=False, lead_time=timedelta(seconds=3600)),
-                ChangeEvent(identifier="5", stamp=datetime(2023, 1, 1, 12, 40, 0), success=False, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=True),
+                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 1, 12, 10, 0), success=False),
+                ChangeEvent(identifier="3", stamp=datetime(2023, 1, 1, 12, 20, 0), success=True),
+                ChangeEvent(identifier="4", stamp=datetime(2023, 1, 1, 12, 30, 0), success=False),
+                ChangeEvent(identifier="5", stamp=datetime(2023, 1, 1, 12, 40, 0), success=False),
             ],
             timedelta(minutes=10),
         ),
@@ -212,15 +216,23 @@ def test_mean_time_to_recover(change_events, expected_mean_recovery_time):
     """
     assert mean_time_to_recover(change_events) == expected_mean_recovery_time
   
-
 @pytest.mark.parametrize(
     "change_events, expected_mean_lead_time",
     [
+        # Case with None values
+        (
+            [
+                ChangeEvent("1", datetime(2023, 1, 1, 12, 0, 0), None),
+                ChangeEvent("2", datetime(2023, 1, 1, 12, 30, 0), False),
+                ChangeEvent("3", datetime(2023, 1, 1, 13, 0, 0), True),
+            ],
+            timedelta(minutes=30),
+        ),
         # Case 1: No succeeding changes (all failures, mean = 0)
         (
             [
-                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=False, lead_time=timedelta(seconds=3600)),
-                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 1, 12, 30, 0), success=False, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=False),
+                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 1, 12, 30, 0), success=False),
             ],
             timedelta(0),
         ),
@@ -228,8 +240,8 @@ def test_mean_time_to_recover(change_events, expected_mean_recovery_time):
         # Case 2: Multiple consecutive successes (mean = 0 because no failures in chunks)
         (
             [
-                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=True, lead_time=timedelta(seconds=3600)),
-                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 1, 12, 30, 0), success=True, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=True),
+                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 1, 12, 30, 0), success=True),
             ],
             timedelta(seconds=1800),
         ),
@@ -237,11 +249,11 @@ def test_mean_time_to_recover(change_events, expected_mean_recovery_time):
         # Case 3: Multiple failures between successes
         (
             [
-                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=False, lead_time=timedelta(seconds=3600)),
-                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 1, 12, 30, 0), success=False, lead_time=timedelta(seconds=3600)),
-                ChangeEvent(identifier="3", stamp=datetime(2023, 1, 1, 13, 0, 0), success=True, lead_time=timedelta(seconds=3600)),
-                ChangeEvent(identifier="4", stamp=datetime(2023, 1, 1, 13, 30, 0), success=False, lead_time=timedelta(seconds=3600)),
-                ChangeEvent(identifier="5", stamp=datetime(2023, 1, 1, 14, 0, 0), success=True, lead_time=timedelta(seconds=3600)),
+                ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=False),
+                ChangeEvent(identifier="2", stamp=datetime(2023, 1, 1, 12, 30, 0), success=False),
+                ChangeEvent(identifier="3", stamp=datetime(2023, 1, 1, 13, 0, 0), success=True),
+                ChangeEvent(identifier="4", stamp=datetime(2023, 1, 1, 13, 30, 0), success=False),
+                ChangeEvent(identifier="5", stamp=datetime(2023, 1, 1, 14, 0, 0), success=True),
             ],
             timedelta(minutes=45),  # Mean: (60 + 30) / 2 = 45 minutes
         ),
