@@ -60,7 +60,7 @@ jobs:
           if [ -z "${{ env.latest_tag }}" ]; then
             NEW_TAG="build-1"
           else
-            VERSION=$((env.latest_tag + 1))
+            VERSION=$(( latest_tag + 1 ))
             NEW_TAG="build-${VERSION}"
           fi
           git tag $NEW_TAG
