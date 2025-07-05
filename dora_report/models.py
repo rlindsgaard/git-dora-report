@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime, timedelta
+from typing import Optional
 
 class ChangeEvent(BaseModel):
     """
@@ -12,11 +13,7 @@ class ChangeEvent(BaseModel):
     :param success: Indicates whether the change was successful. 
                     ``True`` means success, ``False`` indicates an error.
     :type success: bool
-    :param lead_time: The time between when work started and when the change 
-                      was registered, measured in seconds.
-    :type lead_time: timedelta
     """
     identifier: str
     stamp: datetime
-    success: bool
-    lead_time: timedelta
+    success: Optional[bool]

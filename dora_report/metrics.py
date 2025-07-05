@@ -54,10 +54,10 @@ def mean_time_to_recover(change_events: list[ChangeEvent]) -> timedelta:
 
     # Iterate over events to calculate recovery times
     for event in change_events:
-        if not event.success:
+        if event.success is False:
             if failure_start is None:
                 failure_start = event.stamp  # Mark the start of failure
-        elif failure_start:
+        elif event.success and failure_start:
             # Recovery happens at the first successful event after a failure
             recovery_time = event.stamp - failure_start
             recovery_times.append(recovery_time)
