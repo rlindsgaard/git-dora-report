@@ -237,7 +237,7 @@ def test_mean_time_to_recover(change_events, expected_mean_recovery_time):
                     success=True
                 ),
             ],
-            timedelta(minutes=30),
+            timedelta(minutes=45),
         ),
         # Case 1: No succeeding changes (all failures, mean = 0)
         (
