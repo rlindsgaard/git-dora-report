@@ -131,7 +131,7 @@ def test_change_frequency_zero_duration():
                 ChangeEvent(identifier="2", stamp=datetime(2023, 1, 2, 12, 0, 0), success=True),
                 ChangeEvent(identifier="3", stamp=datetime(2023, 1, 3, 12, 0, 0), success=False),
                 ChangeEvent(identifier="4", stamp=datetime(2023, 1, 4, 12, 0, 0), success=True),
-                ChangeEvent(identifier="5", stamp=datetime(2023, 1, 5, 12, 0, 0), success=False)),
+                ChangeEvent(identifier="5", stamp=datetime(2023, 1, 5, 12, 0, 0), success=False),
                 ChangeEvent(identifier="6", stamp=datetime(2023, 1, 6, 12, 0, 0), success=True),
                 ChangeEvent(identifier="7", stamp=datetime(2023, 1, 7, 12, 0, 0), success=True),
             ],
