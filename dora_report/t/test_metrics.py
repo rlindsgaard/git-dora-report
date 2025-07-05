@@ -221,9 +221,21 @@ def test_mean_time_to_recover(change_events, expected_mean_recovery_time):
         # Case with None values
         (
             [
-                ChangeEvent("1", datetime(2023, 1, 1, 12, 0, 0), None),
-                ChangeEvent("2", datetime(2023, 1, 1, 12, 30, 0), False),
-                ChangeEvent("3", datetime(2023, 1, 1, 13, 0, 0), True),
+                ChangeEvent(
+                    identifier="1", 
+                    stamp=datetime(2023, 1, 1, 12, 0, 0), 
+                    success=None
+                ),
+                ChangeEvent(
+                    identifier="2", 
+                    stamp=datetime(2023, 1, 1, 12, 30, 0), 
+                    success=False
+                ),
+                ChangeEvent(
+                    identifier="3", 
+                    stamp=datetime(2023, 1, 1, 13, 0, 0), 
+                    success=True
+                ),
             ],
             timedelta(minutes=30),
         ),
