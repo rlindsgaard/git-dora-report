@@ -56,6 +56,7 @@ def main():
         )
 
     interval_td = parse_interval(args.interval)
+    interval_td = parse_interval(args.interval) * 86400
 
     args.since_dt = since_dt
     args.until_dt = until_dt
