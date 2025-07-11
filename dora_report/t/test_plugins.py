@@ -30,7 +30,7 @@ def test_collect_change_events(plugin_factory):
     example_plugin = plugin_factory()
     
     # Call the static method directly
-    events = list(example_plugin.collect_change_events(arguments))
+    events = list(example_plugin.collect_change_events())
 
     # Assertions
     assert len(events) > 0, "The generator did not yield any ChangeEvent objects."
