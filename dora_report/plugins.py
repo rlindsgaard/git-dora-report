@@ -26,6 +26,7 @@ class FakeGitMerge:
             arguments.since_dt, 
             arguments.until_dt,
         )
+        return obj
         
     @staticmethod
     def add_arguments(parser):
