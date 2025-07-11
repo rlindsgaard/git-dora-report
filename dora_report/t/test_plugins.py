@@ -37,7 +37,7 @@ def test_collect_change_events(plugin_factory):
 
     for event in events:
         assert isinstance(event, ChangeEvent), "Yielded object is not a ChangeEvent."
-        assert arguments.since <= event.stamp <= arguments.until, "Event stamp is outside the specified time range."
+        assert datetime(2023, 1, 1, 12, 0, 0)<= event.stamp <= datetime(2023, 1, 1, 13, 0, 0), "Event stamp is outside the specified time range."
 
     # Ensure timestamps are incremental
     for i in range(len(events) - 1):
