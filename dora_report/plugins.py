@@ -9,6 +9,8 @@ class FakeGitMerge:
     """
     A plugin to acquire change events within a specified time range.
     """
+    name = "example_plugin"
+    
     def __init__(self, log, since, until):
         self.log = log
         self.since = since
@@ -74,3 +76,4 @@ class FakeGitMerge:
                 stamp=current_time,
                 success=fake.random_element([True, False, None]),
             )
+ 

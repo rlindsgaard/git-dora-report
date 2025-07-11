@@ -2,9 +2,16 @@ from argparse import ArgumentParser
 from datetime import datetime
 import logging
 
+from dora_report.plugins import FakeGitMerge
+
 
 def main():
     parser = ArgumentParser()
+    
+    # Add subcommand
+    subparsers = parser.add_subparsers(help="subcommand help")
+    p1 = subparsers.add_parser(FakeGitMerge.name)
+    FakeGitMerge.add_arguments(p1)
     
     # Add root-level arguments
     parser.add_argument(
@@ -32,6 +39,7 @@ def main():
         default="1m",
         help="Interval size (e.g., 7d, 1w, 1m)",  # noqa: E501
     )
+    
     args = parser.parse_args()
  
     log = setup_logging(args.verbose)
