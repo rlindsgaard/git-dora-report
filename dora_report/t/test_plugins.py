@@ -16,8 +16,8 @@ def plugin_factory(root_logger, tmp_path):
         arguments = Namespace(
             log=logger,
             repository=repository,
-            since,
-            until,
+            since=since,
+            until=until,
         )
 
         return FakeGitMerge.from_arguments(arguments)
