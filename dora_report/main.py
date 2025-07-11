@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 from datetime import datetime
+import logging
 
 
 def main():
@@ -55,7 +56,6 @@ def main():
             else datetime.strptime(args.since, "%Y-%m-%d")
         )
 
-    interval_td = parse_interval(args.interval)
     interval_td = parse_interval(args.interval) * 86400
 
     args.since_dt = since_dt
