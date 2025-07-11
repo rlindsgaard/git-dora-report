@@ -17,7 +17,7 @@ class FakeGitMerge:
     @classmethod
     def from_arguments(cls, arguments):
         # Ensure the arguments have the required attributes
-        if arguments.since_dt is None or arguments.until_dt is None:
+        if not hasattr(arguments, "since_dt") or not hasattr(arguments, "until_dt"):
             raise ValueError("'since' and 'until' must be specified")
         obj = cls(
             arguments.log,
