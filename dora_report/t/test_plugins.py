@@ -9,7 +9,7 @@ import subprocess
 def plugin_factory(root_logger, tmp_path):
     def inner(
         logger=root_logger,
-        repository=tmp_path
+        repository=tmp_path,
         since=datetime(2023, 1, 1, 12, 0, 0),
         until=datetime(2023, 1, 1, 13, 0, 0),
     ):
@@ -17,7 +17,7 @@ def plugin_factory(root_logger, tmp_path):
             log=logger,
             repository=repository,
             since,
-            until
+            until,
         )
 
         return FakeGitMerge.from_arguments(arguments)
