@@ -58,14 +58,14 @@ class FakeGitMerge:
         current_time = self.since
 
         # Generate events until the current_time exceeds 'until'
-        while current_time < arguments.until:
+        while current_time < self.until:
             self.log.info("Generating a new ChangeEvent")
             # Generate a random increment (e.g., 1-10 minutes)
             increment = timedelta(minutes=fake.random_int(min=1, max=10))
             current_time += increment
 
             # If current time exceeds the 'until' range, stop generation
-            if current_time > arguments.until:
+            if current_time > self.until:
                 break
 
             # Yield a ChangeEvent with varying success
