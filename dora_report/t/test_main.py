@@ -1,3 +1,5 @@
+import pytest
+
 from dora_report.main import main, parse_interval
 
 def test_main(script_runner):
