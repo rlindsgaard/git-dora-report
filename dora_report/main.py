@@ -55,9 +55,26 @@ def main():
 
     interval_td = parse_interval(args.interval)
 
+    args.since_dt = since_dt
+    args.until_dt = until_dt
+    args.interval_td = interval_td
+      
     print(args)
- 
- 
+
+
+def setup_logging(verbosity: int) -> logging.Logger:
+    """Set up logging based on verbosity level."""
+    log_level = logging.WARNING
+    if verbosity == 1:
+        log_level = logging.INFO
+    elif verbosity >= 2:
+        log_level = logging.DEBUG
+    logging.basicConfig(level=log_level, format="[%(levelname)s] %(message)s")
+    log = logging.getLogger("dora-metrics")
+    log.info(f"Verbosity set to {verbosity}")
+    return log 
+
+
 def parse_interval(interval_str):
     if interval_str.endswith("d"):
         return int(interval_str[:-1])  # Days
