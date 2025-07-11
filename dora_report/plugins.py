@@ -3,14 +3,42 @@ from typing import Generator
 from argparse import Namespace
 from faker import Faker
 from dora_report.models import ChangeEvent
+import os
 
-class GitMergeWithTag:
+class FakeGitMerge:
     """
     A plugin to acquire change events within a specified time range.
     """
-
+    def __init__(self, log, since, until):
+        self.log = log
+        self.since = since
+        self.until = until
+ 
+    @classmethod
+    def from_arguments(cls, arguments):
+        # Ensure the arguments have the required attributes
+        if self.since is None or self.until is none:
+            raise ValueError("'since' and 'until' must be specified")
+        obj = cls(
+            arguments.log,
+            arguments.since_dt, 
+            arguments.until_dt,
+        )
+        
     @staticmethod
-    def acquire_change_events(arguments: Namespace) -> Generator[ChangeEvent, None, None]:
+    def add_arguments(parser):
+        """
+        Add plugin centric arguments
+        
+        The plugin's behavior can be modified at runtime with the
+        arguments added to the parser.
+        Command line options are made available to the plugin via 
+        the arguments parameter in the `from_arguments` method.
+        """
+        pass
+                     
+ 
+    def collect_change_events(self) -> Generator[ChangeEvent, None, None]:
         """
         A generator method that yields ChangeEvent objects with stamps within the
         time range specified by the arguments object.
@@ -24,14 +52,11 @@ class GitMergeWithTag:
         """
         fake = Faker()
 
-        # Ensure the arguments have the required attributes
-        if not hasattr(arguments, "since") or not hasattr(arguments, "until"):
-            raise ValueError("Arguments object must have 'since' and 'until' attributes.")
-
-        current_time = arguments.since
+        current_time = self.since
 
         # Generate events until the current_time exceeds 'until'
         while current_time < arguments.until:
+            self.log.info("Generating a new ChangeEvent")
             # Generate a random increment (e.g., 1-10 minutes)
             increment = timedelta(minutes=fake.random_int(min=1, max=10))
             current_time += increment
@@ -44,6 +69,5 @@ class GitMergeWithTag:
             yield ChangeEvent(
                 identifier=fake.sha1(),
                 stamp=current_time,
-                success=fake.boolean(),
-                lead_time=timedelta(seconds=fake.random_int(min=0, max=3600)),
+                success=fake.random_element([True, False, None]),
             )
