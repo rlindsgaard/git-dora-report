@@ -20,7 +20,7 @@ def main():
     )
     p1 = subparsers.add_parser(FakeGitMerge.name)
     FakeGitMerge.add_arguments(p1)
-    collectors[FakeGitMerge] = FakeGitMerge
+    collectors[FakeGitMerge.name] = FakeGitMerge
     
     # Add root-level arguments
     parser.add_argument(
