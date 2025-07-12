@@ -5,7 +5,12 @@ import logging
 from dora_report.plugins import FakeGitMerge
 
 
+class DoraReport:
+    def __init__(self, collector):
+        self.collector = collector
+
 def main():
+    collectors = {}
     parser = ArgumentParser()
     
     # Add subcommand
@@ -15,6 +20,7 @@ def main():
     )
     p1 = subparsers.add_parser(FakeGitMerge.name)
     FakeGitMerge.add_arguments(p1)
+    collectors[FakeGitMerge] = FakeGitMerge
     
     # Add root-level arguments
     parser.add_argument(
@@ -74,7 +80,8 @@ def main():
     args.interval_seconds = interval_seconds
       
     print(args)
-
+    collector = collectors[args.collector].from_arguments(args)
+    DoraReport(collector=collector)
 
 def setup_logging(verbosity: int) -> logging.Logger:
     """Set up logging based on verbosity level."""
