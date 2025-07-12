@@ -9,13 +9,13 @@ def test_main(script_runner):
 @pytest.mark.parametrize(
     "interval_str, expected_output",
     [
-        ("7d", 7),    # Valid days
-        ("2w", 14),   # Valid weeks
-        ("1m", 30),   # Valid months
+        ("7d", 7.0),    # Valid days
+        ("2w", 14.0),   # Valid weeks
+        ("1m", 30.0),   # Valid months
     ]
 )
 def test_parse_interval_valid(interval_str, expected_output):
-    assert parse_interval(interval_str) == expected_output
+    assert parse_interval(interval_str) / 86400 == expected_output
 
 @pytest.mark.parametrize(
     "interval_str, expected_exception_message",

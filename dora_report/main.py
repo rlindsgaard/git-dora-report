@@ -9,7 +9,10 @@ def main():
     parser = ArgumentParser()
     
     # Add subcommand
-    subparsers = parser.add_subparsers(help="subcommand help")
+    subparsers = parser.add_subparsers(
+        dest="collector", 
+        help="subcommand help",
+    )
     p1 = subparsers.add_parser(FakeGitMerge.name)
     FakeGitMerge.add_arguments(p1)
     
@@ -55,7 +58,7 @@ def main():
     if not args.since:
         since_dt = datetime(1970, 1, 1)
         log.warning(
-            "No --since provided and could not determine first commit, defaulting to start of Unix epoch (1970-01-01 00:00:00)."
+            "No --since provided, defaulting to start of Unix epoch (1970-01-01 00:00:00)."
         )
     else:
         since_dt = (
@@ -64,11 +67,11 @@ def main():
             else datetime.strptime(args.since, "%Y-%m-%d")
         )
 
-    interval_td = parse_interval(args.interval) * 86400
+    interval_seconds = parse_interval(args.interval)
 
     args.since_dt = since_dt
     args.until_dt = until_dt
-    args.interval_td = interval_td
+    args.interval_seconds = interval_seconds
       
     print(args)
 
@@ -87,15 +90,19 @@ def setup_logging(verbosity: int) -> logging.Logger:
 
 
 def parse_interval(interval_str):
+    """
+    Parse interval string into seconds
+    """
     if interval_str.endswith("d"):
-        return int(interval_str[:-1])  # Days
+        return int(interval_str[:-1]) * 86400.0 # Days
     elif interval_str.endswith("w"):
-        return int(interval_str[:-1]) * 7  # Weeks converted to days
+        return int(interval_str[:-1]) * 604800.0  # Weeks converted to days
     elif interval_str.endswith("m"):
-        return int(interval_str[:-1]) * 30  # Approximate months as 30 days
+        return int(interval_str[:-1]) *   2592000.0 # Approximate months as 30 days
     else:
         raise ValueError("Invalid interval format. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)")
 
 
 if __name__ == "__main__":
     main()
+ 
