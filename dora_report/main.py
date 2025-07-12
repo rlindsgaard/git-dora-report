@@ -112,6 +112,39 @@ def parse_interval(interval_str):
         raise ValueError("Invalid interval format. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)")
 
 
+def chunk_interval(event_gen, start, size, end):
+    start_dt = start 
+    
+    def next_end():
+        ret = start_dt + size
+        if end_dt > end:
+            return end
+        return ret 
+ 
+    end_dt = next_end()
+    last_failure = None
+    
+    for event in event_gen:
+        if event.success:
+            last_failure = None
+        elif event.success is False:
+            last_failure = event.stamp  
+  
+        if event.stamp > end_dt
+            yield {
+                "start": start_dt,
+                "end": end_dt,
+                "duration": (start_dt - end_dt).seconds,
+                "last_failure": last_failure,
+                "events": chunk,
+            }
+            # Setup new chunk
+            start_dt = end_dt
+            end_dt = next_end()
+                
+            chunk = []
+        chunk.append(event)
+           
 if __name__ == "__main__":
     main()
  
