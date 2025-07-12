@@ -124,6 +124,7 @@ def chunk_interval(event_gen, start, size, end):
  
     end_dt = next_end()
     last_failure = None
+    chunk = []
     
     for event in event_gen:
         if event.success:
