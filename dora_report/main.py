@@ -130,7 +130,7 @@ def chunk_interval(event_gen, start, size, end):
         elif event.success is False:
             last_failure = event.stamp  
   
-        if event.stamp > end_dt
+        if event.stamp > end_dt:
             yield {
                 "start": start_dt,
                 "end": end_dt,
