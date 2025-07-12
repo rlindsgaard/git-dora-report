@@ -136,7 +136,7 @@ def chunk_interval(event_gen, start, size, end):
             yield {
                 "start": start_dt,
                 "end": end_dt,
-                "duration": (start_dt - end_dt).total_seconds(),
+                "duration": (end_dt - start_dt).total_seconds(),
                 "last_failure": last_failure,
                 "events": chunk,
             }
