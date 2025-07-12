@@ -52,7 +52,9 @@ def main():
     args = parser.parse_args()
  
     log = setup_logging(args.verbose)
-        # Parse date arguments
+    args.log = log
+    
+    # Parse date arguments
     if not args.until:
         until_dt = datetime.now()
     else:
