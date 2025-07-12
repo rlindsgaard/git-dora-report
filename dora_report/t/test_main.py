@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dora_report.main import main, parse_interval
+from dora_report.main import main, parse_interval, chunk_interval
 
 def test_main(script_runner):
     script_runner.run("dora_report/main.py example_plugin", check=True, shell=True)
