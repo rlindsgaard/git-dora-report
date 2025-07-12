@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 
 from dora_report.plugins import FakeGitMerge
@@ -116,7 +116,7 @@ def chunk_interval(event_gen, start, size, end):
     start_dt = start 
     
     def next_end():
-        ret = start_dt + size
+        ret = start_dt + timedelta(seconds=size)
         if end_dt > end:
             return end
         return ret 
