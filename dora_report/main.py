@@ -113,7 +113,8 @@ def parse_interval(interval_str):
 
 
 def chunk_interval(event_gen, start, size, end):
-    start_dt = start 
+    start_dt = start
+    end_dt = None  # Need to initialize it for scope
     
     def next_end():
         ret = start_dt + timedelta(seconds=size)
