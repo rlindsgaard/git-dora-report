@@ -14,7 +14,7 @@ class DoraReport:
         self.records = []
         
     def analyze(self):
-        event_gen = self.collector.collect_change_events
+        event_gen = self.collector.collect_change_events()
         for chunk in chunk_interval(event_gen, start=self.since, size=self.interval_seconds, end=self.until):
             # Aggregate
             record = Record(
