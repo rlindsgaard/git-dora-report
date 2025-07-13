@@ -6,8 +6,33 @@ from dora_report.plugins import FakeGitMerge
 
 
 class DoraReport:
-    def __init__(self, collector):
-        self.collector = collector
+    def __init__(self, args):
+        self.collector = args.collector
+        self.interval_seconds = args.interval_seconds
+        self.since = args.since_dt
+        self.until = args.until_dt
+        self.records = []
+        
+    def analyze():
+        event_gen = self.collector.collect_change_events
+        for chunk in chunk_intervals(event_gen, start=self.since, size=self.interval_seconds, end=self.until):
+            # Aggregate
+            record = Record(
+                start=chunk["start"],
+                end=chunk["end"],
+                duration=chunk["duration"],
+            ) 
+            self.records.append(record)
+
+ 
+class Record:
+    def __init__(self, start, end, duration):
+        self.fields = {
+            "start": start,
+            "end": end,
+            "duration": duration
+        }
+
 
 def main():
     collectors = {}
@@ -15,7 +40,7 @@ def main():
     
     # Add subcommand
     subparsers = parser.add_subparsers(
-        dest="collector", 
+        dest="collector_name", 
         help="subcommand help",
     )
     p1 = subparsers.add_parser(FakeGitMerge.name)
@@ -82,8 +107,11 @@ def main():
     args.interval_seconds = interval_seconds
       
     print(args)
-    collector = collectors[args.collector].from_arguments(args)
-    DoraReport(collector=collector)
+    collector = collectors[args.collector_name].from_arguments(args)
+    args.collector = collector
+    report = DoraReport(args)
+    report.analyze()
+
 
 def setup_logging(verbosity: int) -> logging.Logger:
     """Set up logging based on verbosity level."""
