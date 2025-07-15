@@ -171,6 +171,7 @@ def chunk_interval(event_gen, since, size, until):
             elif event.success is False and  last_failure is None:
                 last_failure = event.stamp     
             chunk.append(event)
+        yield chunk, last_failure 
 
     for s, e, d in intervals:
         chunk, last_failure = chunk_events(s, e)
