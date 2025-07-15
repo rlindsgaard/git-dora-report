@@ -159,22 +159,23 @@ def chunk_interval(event_gen, since, size, until):
         timedelta(seconds=size),
     ) 
 
-    def chunk_events(start, stop):
-        chunk = []
-        last_failure = None
-        for event in event_gen:
-            if event.stamp > e: 
-                yield chunk, last_failure
-                chunk = [] 
-            if event.success:
-                last_failure = None
-            elif event.success is False and  last_failure is None:
-                last_failure = event.stamp     
-            chunk.append(event)
-        yield chunk, last_failure 
-
+    chunk = []
+    last_failure = None
+ 
     for s, e, d in intervals:
-        chunk, last_failure = chunk_events(s, e)
+        try:
+            while True:
+                event = gen_event.next()
+                if event.stamp > e:
+                    break
+                if event.success:
+                    last_failure = None
+                elif event.success is False and  last_failure is None:
+                    last_failure = event.stamp
+                chunk.append(event)
+        catch StopIteration:
+            chunk = []
+ 
         yield {
             "start": s,
             "end": e,
@@ -182,6 +183,8 @@ def chunk_interval(event_gen, since, size, until):
             "last_failure": last_failure,
             "events": chunk,
         }
+        
+        chunk = [event]
 
            
 if __name__ == "__main__":
