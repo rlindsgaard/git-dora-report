@@ -166,7 +166,7 @@ def chunk_interval(event_gen, since, size, until):
     for s, e, d in intervals:
         try:
             while True:
-                event = gen_event.next()
+                event = event_gen.next()
                 if event.stamp > e:
                     break
                 if event.success:
