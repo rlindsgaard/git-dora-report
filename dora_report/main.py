@@ -32,6 +32,9 @@ class Record:
             "end": end,
             "duration": duration
         }
+        
+    def json(self):
+        json.dumps(self.fields) 
 
 
 def main():
@@ -111,7 +114,11 @@ def main():
     args.collector = collector
     report = DoraReport(args)
     report.analyze()
-
+    print([
+        r.json() + "\n"
+        for r in report.records
+    ])
+    
 
 def setup_logging(verbosity: int) -> logging.Logger:
     """Set up logging based on verbosity level."""

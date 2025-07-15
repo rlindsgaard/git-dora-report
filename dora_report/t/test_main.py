@@ -6,8 +6,13 @@ import pytest
 from dora_report.main import main, parse_interval, chunk_interval
 
 def test_main(script_runner):
-    script_runner.run("dora_report/main.py --since 2025-07-12 --until 2025-07-14 example_plugin", check=True, shell=True)
+    result = script_runner.run("dora_report/main.py --since 2025-07-12 --until 2025-07-14 example_plugin", check=True, shell=True)
 
+    assert result.stdout == """
+{"start": "","end":"","duration":""}
+{"start": "","end":"","duration":""}
+{"start":"","end":"","duration":""}
+""".lstrip()
 
 @pytest.mark.parametrize(
     "interval_str, expected_output",
