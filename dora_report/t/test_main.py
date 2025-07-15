@@ -6,7 +6,7 @@ import pytest
 from dora_report.main import main, parse_interval, chunk_interval
 
 def test_main(script_runner):
-    result = script_runner.run("dora_report/main.py --since 2025-07-12 --until 2025-07-14 --interval 1d example_plugin", check=True, shell=True)
+    result = script_runner.run("dora_report/main.py --since 2025-07-12 --until 2025-07-14 --interval 1d -vv example_plugin", check=True, shell=True)
 
     assert result.stdout == """
 {"start": "","end":"","duration":""}
