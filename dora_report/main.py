@@ -163,7 +163,7 @@ def chunk_interval(event_gen, since, size, until):
                 break
             if event.success:
                 last_failure = None
-            elif event.success is False and  last_failure = None:
+            elif event.success is False and  last_failure is None:
                 last_failure = event.stamp     
             chunk.append(event)
              
