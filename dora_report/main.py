@@ -161,6 +161,7 @@ def chunk_interval(event_gen, since, size, until):
 
     chunk = []
     last_failure = None
+    event = None
  
     for s, e, d in intervals:
         try:
@@ -173,8 +174,8 @@ def chunk_interval(event_gen, since, size, until):
                 elif event.success is False and  last_failure is None:
                     last_failure = event.stamp
                 chunk.append(event)
-        catch StopIteration:
-            chunk = []
+        except StopIteration:
+              event = None
  
         yield {
             "start": s,
@@ -184,7 +185,8 @@ def chunk_interval(event_gen, since, size, until):
             "events": chunk,
         }
         
-        chunk = [event]
+        if event is not None:
+            chunk = [event]
 
            
 if __name__ == "__main__":
