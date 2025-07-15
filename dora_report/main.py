@@ -164,7 +164,7 @@ def chunk_interval(event_gen, since, size, until):
         last_failure = None
         for event in event_gen:
             if event.stamp > e: 
-                yield chunk
+                yield chunk, last_failure
                 chunk = [] 
             if event.success:
                 last_failure = None
@@ -173,14 +173,14 @@ def chunk_interval(event_gen, since, size, until):
             chunk.append(event)
 
     for s, e, d in intervals:
+        chunk, last_failure = chunk_events(s, e)
         yield {
             "start": s,
             "end": e,
             "duration": d,
             "last_failure": last_failure,
-            "events": chunk_events(s, e),
+            "events": chunk,
         }
-        chunk = [event]
 
            
 if __name__ == "__main__":
