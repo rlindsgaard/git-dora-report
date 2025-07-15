@@ -43,6 +43,9 @@ def test_chunk_interval():
             if self.stamp == other.stamp:
                 return self.success == other.success
             return False
+
+        def __str__(self):
+            return f"FakeEvent<{stamp=}, {success=}>"  
  
     events = [
         FakeEvent(stamp=datetime(2025, 7, 12, 9, 0, 0), success=True),
