@@ -153,7 +153,11 @@ def chunk_interval(event_gen, since, size, until):
             duration = (end_dt - start_dt).total_seconds()
         yield start_dt, stop, duration
      
-    intervals = interval_gen(since, until, size)
+    intervals = interval_gen(
+        since, 
+        until, 
+        timedelta(seconds=size),
+    )
     chunk = []
     last_failure = None
     for s, e, d in intervals:
