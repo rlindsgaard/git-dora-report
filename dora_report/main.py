@@ -37,7 +37,14 @@ class Record:
         }
         
     def json(self):
-        json.dumps(self.fields) 
+        return json.dumps(self.fields, cls=DateTimeEncoder)
+ 
+
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
 
 
 def main():
