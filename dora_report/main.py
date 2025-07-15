@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 from datetime import datetime, timedelta
+import json
 import logging
 
 from dora_report.plugins import FakeGitMerge
