@@ -55,9 +55,9 @@ def test_chunk_interval():
     
     actual = list(chunk_interval(
         events, 
-        start=datetime(2025, 7, 12, 0, 0, 0),
+        since=datetime(2025, 7, 12, 0, 0, 0),
         size=86400,
-        end=datetime(2025, 7, 14, 0, 0, 0),
+        until=datetime(2025, 7, 14, 0, 0, 0),
     ))
     
     expect = [
