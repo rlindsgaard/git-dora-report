@@ -15,7 +15,7 @@ class DoraReport:
         
     def analyze(self):
         event_gen = self.collector.collect_change_events()
-        for chunk in chunk_interval(event_gen, start=self.since, size=self.interval_seconds, end=self.until):
+        for chunk in chunk_interval(event_gen, since=self.since, size=self.interval_seconds, until=self.until):
             # Aggregate
             record = Record(
                 start=chunk["start"],
@@ -140,40 +140,54 @@ def parse_interval(interval_str):
         raise ValueError("Invalid interval format. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)")
 
 
-def chunk_interval(event_gen, start, size, end):
-    start_dt = start
-    end_dt = start_dt + timedelta(seconds=size)
-    
-    def next_end():
-        ret = start_dt + timedelta(seconds=size)
-        if end_dt > end:
-            return end
-        return ret 
- 
-    end_dt = next_end()
-    last_failure = None
-    chunk = []
-    
-    for event in event_gen:
-        if event.success:
-            last_failure = None
-        elif event.success is False:
-            last_failure = event.stamp  
-  
-        if event.stamp > end_dt:
-            yield {
-                "start": start_dt,
-                "end": end_dt,
-                "duration": (end_dt - start_dt).total_seconds(),
-                "last_failure": last_failure,
-                "events": chunk,
-            }
-            # Setup new chunk
+def chunk_interval(event_gen, since, size, until):
+      
+    def interval_gen(start, stop, step):
+        start_dt = start
+        end_dt = start_dt + step
+        duration = (end_dt - start_dt).total_seconds()
+        while end_dt < stop:
+            yield start_dt, end_dt, duration
             start_dt = end_dt
-            end_dt = next_end()
-                
-            chunk = []
-        chunk.append(event)
+            end_dt = end_dt + step
+            duration = (end_dt - start_dt).total_seconds()
+        yield start_dt, stop, duration
+     
+    intervals = interval_gen(
+        since, 
+        until, 
+        timedelta(seconds=size),
+    ) 
+
+    chunk = []
+    last_failure = None
+    event = None
+ 
+    for s, e, d in intervals:
+        try:
+            while True:
+                event = next(event_gen)
+                if event.stamp > e:
+                    break
+                if event.success:
+                    last_failure = None
+                elif event.success is False and  last_failure is None:
+                    last_failure = event.stamp
+                chunk.append(event)
+        except StopIteration:
+              event = None
+ 
+        yield {
+            "start": s,
+            "end": e,
+            "duration": d,
+            "last_failure": last_failure,
+            "events": chunk,
+        }
+        
+        if event is not None:
+            chunk = [event]
+
            
 if __name__ == "__main__":
     main()
