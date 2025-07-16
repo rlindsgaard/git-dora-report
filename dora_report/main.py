@@ -125,7 +125,7 @@ def main():
     report = DoraReport(args)
     report.analyze()
     for r in report.records:
-        print(r.json() + "\n")
+        print(r.json())
     args.log.info("Exiting program with success") 
     
 
