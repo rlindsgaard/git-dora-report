@@ -44,7 +44,7 @@ class Record:
         rep = "Record<"
         rep += ", ".join(
             f"{k}={v}" 
-            for k, v in enumerate(self.fields)
+            for k, v in self.fields.items())
         )
         rep += ">"
         return rep
