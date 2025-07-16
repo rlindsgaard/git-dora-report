@@ -42,10 +42,10 @@ class Record:
 
     def __repr__(self):
         rep = "Record<"
-        rep += [
+        rep += ", ".join(
             f"{k}={v}" 
             for k, v in enumerate(self.fields)
-        ].join(", ")
+        )
         rep += ">"
         return rep
  
