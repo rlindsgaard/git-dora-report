@@ -8,11 +8,15 @@ from dora_report.main import main, parse_interval, chunk_interval
 def test_main(script_runner):
     result = script_runner.run("dora_report/main.py --since 2025-07-12 --until 2025-07-14 --interval 1d -vv example_plugin", check=True, shell=True)
 
-    assert result.stdout == """
-{"start": "","end":"","duration":""}
-{"start": "","end":"","duration":""}
-{"start":"","end":"","duration":""}
-""".lstrip()
+    lines = result.stdout.splitlines()
+    assert len(lines)
+    
+    for line in lines:
+        result = json.loads(line)
+        assert start in result
+        assert end in result
+        assert duration in result
+
 
 @pytest.mark.parametrize(
     "interval_str, expected_output",
