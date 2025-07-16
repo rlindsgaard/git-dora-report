@@ -14,9 +14,9 @@ def test_main(script_runner):
     
     for line in lines:
         result = json.loads(line)
-        assert start in result
-        assert end in result
-        assert duration in result
+        assert "start" in result
+        assert "end" in result
+        assert "duration" in result
 
 
 @pytest.mark.parametrize(
