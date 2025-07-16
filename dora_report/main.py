@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import json
 import logging
 
+from dora_report import metrics
 from dora_report.plugins import FakeGitMerge
 
 
@@ -24,17 +25,17 @@ class DoraReport:
                 start=chunk["start"],
                 end=chunk["end"],
                 duration=chunk["duration"],
+                deployment_frequency=metrics.deployment_frequency(chunk["events"], duration)
+                change_failure_rate=metrics.change_failure_rate(chunk["events"])
+                mean_time_to_recover=metrics.mean_time_to_recover(chunk["events"]),
+                lead_time_for_changes=metrics.lead_time_for_changes(chunk["events"]),
             ) 
             self.records.append(record)
 
  
 class Record:
-    def __init__(self, start, end, duration):
-        self.fields = {
-            "start": start,
-            "end": end,
-            "duration": duration
-        }
+    def __init__(self, **kwargs):
+        self.fields = kwargs
         
     def json(self):
         return json.dumps(self.fields, cls=DateTimeEncoder)
@@ -44,6 +45,8 @@ class DateTimeEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, datetime):
             return obj.isoformat()
+        if isinstance(obj, timedelta):
+            return obj.total_seconds() 
         return super().default(obj)
 
 
@@ -161,12 +164,12 @@ def chunk_interval(event_gen, since, size, until):
     def interval_gen(start, stop, step):
         start_dt = start
         end_dt = start_dt + step
-        duration = (end_dt - start_dt).total_seconds()
+        duration = (end_dt - start_dt)
         while end_dt < stop:
             yield start_dt, end_dt, duration
             start_dt = end_dt
             end_dt = end_dt + step
-            duration = (end_dt - start_dt).total_seconds()
+            duration = (end_dt - start_dt)
         yield start_dt, stop, duration
      
     intervals = interval_gen(

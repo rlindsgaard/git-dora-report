@@ -17,6 +17,10 @@ def test_main(script_runner):
         assert "start" in result
         assert "end" in result
         assert "duration" in result
+        assert "deployment_frequency" in result
+        assert "change_failure_rate" in result
+        assert "mean_time_to_recover" in result
+        assert "lead_time_for_changes" in result 
 
 
 @pytest.mark.parametrize(
@@ -77,7 +81,7 @@ def test_chunk_interval():
         {
             "start": datetime(2025, 7, 12),
             "end": datetime(2025, 7, 13),
-            "duration": 86400.0,
+            "duration": timedelta(days=1),
             "last_failure": None,
             "events": [
                 FakeEvent(stamp=datetime(2025, 7, 12, 9, 0, 0), success=True),
@@ -88,7 +92,7 @@ def test_chunk_interval():
         {
             "start": datetime(2025, 7, 13),
             "end": datetime(2025, 7, 14),
-            "duration": 86400.0,
+            "duration": timedelta(days=1),
             "last_failure": None,
             "events": [
                 FakeEvent(stamp=datetime(2025, 7, 13, 8, 5, 0), success=True),
