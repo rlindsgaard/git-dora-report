@@ -119,15 +119,14 @@ def main():
     args.until_dt = until_dt
     args.interval_seconds = interval_seconds
       
-    print(args)
+    args.log.debug(args)
     collector = collectors[args.collector_name].from_arguments(args)
     args.collector = collector
     report = DoraReport(args)
     report.analyze()
-    print([
-        r.json() + "\n"
-        for r in report.records
-    ])
+    for r in report.records:
+        print(r.json() + "\n")
+    args.log.info("Exiting program with success") 
     
 
 def setup_logging(verbosity: int) -> logging.Logger:
