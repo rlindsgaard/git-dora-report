@@ -25,8 +25,8 @@ class DoraReport:
                 start=chunk["start"],
                 end=chunk["end"],
                 duration=chunk["duration"],
-                deployment_frequency=metrics.deployment_frequency(chunk["events"], duration)
-                change_failure_rate=metrics.change_failure_rate(chunk["events"])
+                deployment_frequency=metrics.deployment_frequency(chunk["events"], duration),
+                change_failure_rate=metrics.change_failure_rate(chunk["events"]),
                 mean_time_to_recover=metrics.mean_time_to_recover(chunk["events"]),
                 lead_time_for_changes=metrics.lead_time_for_changes(chunk["events"]),
             ) 
