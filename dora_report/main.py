@@ -39,6 +39,15 @@ class Record:
         
     def json(self):
         return json.dumps(self.fields, cls=DateTimeEncoder)
+
+    def __repr__(self):
+        rep = "Record<"
+        rep += [
+            f"{k}={v}" 
+            for k, v in enumerate(self.fields)
+        ].join(", ")
+        rep += ">"
+        return rep
  
 
 class DateTimeEncoder(json.JSONEncoder):

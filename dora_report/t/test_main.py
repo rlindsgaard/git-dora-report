@@ -23,6 +23,48 @@ def test_main(script_runner):
         assert "lead_time_for_changes" in result 
 
 
+@pytest.fixture
+def interval_chunks():
+    with patch("dora_report.main.chunk_interval") as p:
+        p.return_value = iter(
+            [
+                {
+                    "start": datetime(2025, 7, 12),
+                    "end": datetime(2025, 7, 13),
+                    "duration": timedelta(days=1),
+                    "last_failure": None,
+                    "events": [
+                        FakeEvent(stamp=datetime(2025, 7, 12, 9, 0, 0), success=True),
+                        FakeEvent(stamp=datetime(2025, 7, 12, 11, 55, 0), success=True),
+                        FakeEvent(stamp=datetime(2025, 7, 12, 15, 15, 0), success=True),
+                    ],
+                },
+                {
+                    "start": datetime(2025, 7, 13),
+                    "end": datetime(2025, 7, 14),
+                    "duration": timedelta(days=1),
+                    "last_failure": None,
+                    "events": [
+                        FakeEvent(stamp=datetime(2025, 7, 13, 8, 5, 0), success=True),
+                        FakeEvent(stamp=datetime(2025, 7, 13, 10, 0), success=True),
+                    ],
+                },
+            ]
+        )
+        yield p
+
+def test_dora_report_records(interval_chunks, root_logger):
+    args = Namespace()
+    args.collector = MagicMock()
+    args.since = datetime(2025, 7, 12)
+    args.until = datetime(2025, 7, 14)
+    args.log = root_logger
+    
+    report = DoraReport(args)
+    report.analyze()
+    assert report.records == []
+
+
 @pytest.mark.parametrize(
     "interval_str, expected_output",
     [
