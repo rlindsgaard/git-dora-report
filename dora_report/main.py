@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 from datetime import datetime, timedelta
+import json
 import logging
 
 from dora_report.plugins import FakeGitMerge
@@ -12,8 +13,10 @@ class DoraReport:
         self.since = args.since_dt
         self.until = args.until_dt
         self.records = []
+        self.log = args.log
         
     def analyze(self):
+        self.log.info("Analysing data")
         event_gen = self.collector.collect_change_events()
         for chunk in chunk_interval(event_gen, since=self.since, size=self.interval_seconds, until=self.until):
             # Aggregate
@@ -32,6 +35,16 @@ class Record:
             "end": end,
             "duration": duration
         }
+        
+    def json(self):
+        return json.dumps(self.fields, cls=DateTimeEncoder)
+ 
+
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
 
 
 def main():
@@ -106,12 +119,15 @@ def main():
     args.until_dt = until_dt
     args.interval_seconds = interval_seconds
       
-    print(args)
+    args.log.debug(args)
     collector = collectors[args.collector_name].from_arguments(args)
     args.collector = collector
     report = DoraReport(args)
     report.analyze()
-
+    for r in report.records:
+        print(r.json())
+    args.log.info("Exiting program with success") 
+    
 
 def setup_logging(verbosity: int) -> logging.Logger:
     """Set up logging based on verbosity level."""

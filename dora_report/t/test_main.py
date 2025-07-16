@@ -1,4 +1,5 @@
 from datetime import datetime
+import json
 from unittest.mock import MagicMock
 
 import pytest
@@ -6,7 +7,16 @@ import pytest
 from dora_report.main import main, parse_interval, chunk_interval
 
 def test_main(script_runner):
-    script_runner.run("dora_report/main.py --since 2025-07-12 --until 2025-07-14 example_plugin", check=True, shell=True)
+    result = script_runner.run("dora_report/main.py --since 2025-07-12 --until 2025-07-14 --interval 1d -vv example_plugin", check=True, shell=True)
+
+    lines = result.stdout.splitlines()
+    assert len(lines)
+    
+    for line in lines:
+        result = json.loads(line)
+        assert "start" in result
+        assert "end" in result
+        assert "duration" in result
 
 
 @pytest.mark.parametrize(
