@@ -69,7 +69,7 @@ def interval_chunks():
         yield p
 
 def test_dora_report_records(interval_chunks, root_logger):
-    args = Namespace()
+    args = MagicMock()
     args.collector = MagicMock()
     args.since = datetime(2025, 7, 12)
     args.until = datetime(2025, 7, 14)
