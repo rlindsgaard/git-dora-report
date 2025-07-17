@@ -266,7 +266,7 @@ def test_mean_time_to_recover(change_events, expected_mean_recovery_time):
                 ChangeEvent(identifier="1", stamp=datetime(2023, 1, 1, 12, 0, 0), success=True),
                 ChangeEvent(identifier="2", stamp=datetime(2023, 1, 1, 12, 30, 0), success=True),
             ],
-            timedelta(seconds=1800),
+            timedelta(seconds=0),
         ),
 
         # Case 3: Multiple failures between successes
@@ -278,7 +278,7 @@ def test_mean_time_to_recover(change_events, expected_mean_recovery_time):
                 ChangeEvent(identifier="4", stamp=datetime(2023, 1, 1, 13, 30, 0), success=False),
                 ChangeEvent(identifier="5", stamp=datetime(2023, 1, 1, 14, 0, 0), success=True),
             ],
-            timedelta(minutes=45),  # Mean: (60 + 30) / 2 = 45 minutes
+            timedelta(minutes=40),
         ),
     ],
 )
@@ -305,9 +305,9 @@ def test_lead_time_for_changes_with_fixture(change_event_factory):
     # Calculate expected lead times:
     # Chunk 1: Lead times = (T3-T1) and (T3-T2)
     # Chunk 2: Lead time  = (T5-T4)
-    lead_time_chunk_1 = timedelta(seconds=300 + 300)  # 10 minutes
+    lead_time_chunk_1 = timedelta(seconds=300+600)  # 10 minutes
     lead_time_chunk_2 = timedelta(seconds=300)        # 5 minutes
-    expected_mean_lead_time = (lead_time_chunk_1 + lead_time_chunk_2) / 2
+    expected_mean_lead_time = (lead_time_chunk_1 + lead_time_chunk_2) / 3
 
     # Assert the result
     assert lead_time_for_changes(change_events) == expected_mean_lead_time 

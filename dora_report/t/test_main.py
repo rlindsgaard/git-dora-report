@@ -1,10 +1,31 @@
 from datetime import datetime, timedelta
 import json
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from dora_report.main import main, parse_interval, chunk_interval
+from dora_report.main import (
+    main, 
+    parse_interval, 
+    chunk_interval, 
+    DoraReport, 
+    Record,
+) 
+
+
+class FakeEvent:
+    def __init__(self, stamp, success=None):
+        self.stamp = stamp
+        self.success = success
+            
+    def __eq__(self, other): 
+        if self.stamp == other.stamp:
+            return self.success == other.success
+        return False
+
+    def __str__(self):
+        return f"FakeEvent<{stamp=}, {success=}>"
+
 
 def test_main(script_runner):
     result = script_runner.run("dora_report/main.py --since 2025-07-12 --until 2025-07-14 --interval 1d -vv example_plugin", check=True, shell=True)
@@ -23,23 +44,86 @@ def test_main(script_runner):
         assert "lead_time_for_changes" in result 
 
 
+@pytest.fixture
+def interval_chunks():
+    with patch("dora_report.main.chunk_interval") as p:
+        p.return_value = iter(
+            [
+                {
+                    "start": datetime(2025, 7, 12),
+                    "end": datetime(2025, 7, 13),
+                    "duration": timedelta(days=1),
+                    "last_failure": None,
+                    "events": [
+                        FakeEvent(stamp=datetime(2025, 7, 12, 9, 0, 0), success=True),
+                        FakeEvent(stamp=datetime(2025, 7, 12, 11, 55, 0), success=True),
+                        FakeEvent(stamp=datetime(2025, 7, 12, 15, 15, 0), success=True),
+                    ],
+                },
+                {
+                    "start": datetime(2025, 7, 13),
+                    "end": datetime(2025, 7, 14),
+                    "duration": timedelta(days=1),
+                    "last_failure": None,
+                    "events": [
+                        FakeEvent(stamp=datetime(2025, 7, 13, 8, 5, 0), success=True),
+                        FakeEvent(stamp=datetime(2025, 7, 13, 10, 0), success=True),
+                    ],
+                },
+            ]
+        )
+        yield p
+
+def test_dora_report_records(interval_chunks, root_logger):
+    args = MagicMock()
+    args.collector = MagicMock()
+    args.interval_seconds = 86400.0
+    args.interval_unit = "d"
+    args.since = datetime(2025, 7, 12)
+    args.until = datetime(2025, 7, 14)
+    args.log = root_logger
+    
+    report = DoraReport(args)
+    report.analyze()
+    assert report.records == [
+        Record(
+            start=datetime(2025, 7, 12), 
+            end=datetime(2025, 7, 13), 
+            duration=timedelta(days=1), 
+            deployment_frequency=3.0, 
+            change_failure_rate=0.0,
+            mean_time_to_recover=timedelta(0),
+            lead_time_for_changes=timedelta(0),
+        ),
+        Record(
+            start=datetime(2025, 7, 13), 
+            end=datetime(2025, 7, 14), 
+            duration=timedelta(days=1), 
+            deployment_frequency=2.0, 
+            change_failure_rate=0.0, 
+            mean_time_to_recover=timedelta(0), 
+            lead_time_for_changes=timedelta(0),
+        ),
+    ]
+
+
 @pytest.mark.parametrize(
     "interval_str, expected_output",
     [
-        ("7d", 7.0),    # Valid days
-        ("2w", 14.0),   # Valid weeks
-        ("1m", 30.0),   # Valid months
+        ("7d", (7.0 * 86400, "d")),    # Valid days
+        ("2w", (14.0 * 86400, "w")),   # Valid weeks
+        ("1m", (30.0 * 86400, "m")),   # Valid months
     ]
 )
 def test_parse_interval_valid(interval_str, expected_output):
-    assert parse_interval(interval_str) / 86400 == expected_output
+    assert parse_interval(interval_str) == expected_output
 
 @pytest.mark.parametrize(
     "interval_str, expected_exception_message",
     [
         ("10", "Invalid interval format. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)"),  # Missing suffix
         ("5y", "Invalid interval format. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)"),  # Unknown suffix
-        ("", "Invalid interval format. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)"),    # Empty string
+        ("", "Zero-length argument not supported. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)"),    # Empty string
     ]
 )
 def test_parse_interval_invalid(interval_str, expected_exception_message):
@@ -48,19 +132,6 @@ def test_parse_interval_invalid(interval_str, expected_exception_message):
     assert str(exc_info.value) == expected_exception_message
 
 def test_chunk_interval():
-    class FakeEvent:
-        def __init__(self, stamp, success=None):
-            self.stamp = stamp
-            self.success = success
-            
-        def __eq__(self, other): 
-            if self.stamp == other.stamp:
-                return self.success == other.success
-            return False
-
-        def __str__(self):
-            return f"FakeEvent<{stamp=}, {success=}>"  
- 
     events = [
         FakeEvent(stamp=datetime(2025, 7, 12, 9, 0, 0), success=True),
         FakeEvent(stamp=datetime(2025, 7, 12, 11, 55, 0), success=True),
