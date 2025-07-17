@@ -33,7 +33,7 @@ class DoraReport:
                 duration=chunk["duration"],
                 deployment_frequency=metrics.change_frequency(
                     chunk["events"], 
-                    timedelta(seconds=unit_in_seconds[self.interval_unit]),
+                    timedelta(seconds=self.interval_seconds/unit_in_seconds[self.interval_unit]),
                 ),
                 change_failure_rate=metrics.change_failure_rate(chunk["events"]),
                 mean_time_to_recover=metrics.mean_time_to_recover(chunk["events"]),
