@@ -170,7 +170,7 @@ def parse_interval(interval_str):
         if unit not in ["d", "w", "m"]:
             raise ValueError("Invalid interval format. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)")
         return int(interval_str[:-1]) * unit_in_seconds[unit], unit
-    except IndexError, e:
+    except IndexError e:
         raise ValueError("Zero-length argument not supported. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)")
 
 def chunk_interval(event_gen, since, size, until):
