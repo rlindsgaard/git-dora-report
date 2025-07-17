@@ -6,11 +6,17 @@ import logging
 from dora_report import metrics
 from dora_report.plugins import FakeGitMerge
 
+unit_in_seconds = {
+    "d": 60 * 60 * 24,
+    "w": 60 * 60 * 24 * 7,
+    "m": 60 * 60 * 24 * 30,
+}
 
 class DoraReport:
     def __init__(self, args):
         self.collector = args.collector
         self.interval_seconds = args.interval_seconds
+        self.interval_unit = args.interval_unit
         self.since = args.since_dt
         self.until = args.until_dt
         self.records = []
@@ -25,7 +31,7 @@ class DoraReport:
                 start=chunk["start"],
                 end=chunk["end"],
                 duration=chunk["duration"],
-                deployment_frequency=metrics.change_frequency(chunk["events"], chunk["duration"]),
+                deployment_frequency=metrics.change_frequency(chunk["events"], unit_in_seconds[self.interval_unit]),
                 change_failure_rate=metrics.change_failure_rate(chunk["events"]),
                 mean_time_to_recover=metrics.mean_time_to_recover(chunk["events"]),
                 lead_time_for_changes=metrics.lead_time_for_changes(chunk["events"]),
@@ -158,14 +164,10 @@ def parse_interval(interval_str):
     """
     Parse interval string into seconds
     """
-    if interval_str.endswith("d"):
-        return int(interval_str[:-1]) * 86400.0 # Days
-    elif interval_str.endswith("w"):
-        return int(interval_str[:-1]) * 604800.0  # Weeks converted to days
-    elif interval_str.endswith("m"):
-        return int(interval_str[:-1]) *   2592000.0 # Approximate months as 30 days
-    else:
+    unit = interval_str[-1]
+    if unit not in ["d", "w", "m"]:
         raise ValueError("Invalid interval format. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)")
+    return int(interval_str[:-1]) * unit_in_seconds[unit] * 1.0, unit
 
 
 def chunk_interval(event_gen, since, size, until):
