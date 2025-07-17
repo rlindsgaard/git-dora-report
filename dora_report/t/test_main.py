@@ -4,7 +4,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from dora_report.main import main, parse_interval, chunk_interval, DoraReport
+from dora_report.main import (
+    main, 
+    parse_interval, 
+    chunk_interval, 
+    DoraReport, 
+    Record,
+) 
 
 
 class FakeEvent:
