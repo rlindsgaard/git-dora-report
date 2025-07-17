@@ -94,7 +94,7 @@ def lead_time_for_changes(change_events: list[ChangeEvent]) -> timedelta:
                 success_stamp = event.stamp
                 for e in chunk[:-1]:  # Exclude the final successful event
                     lead_times.append(success_stamp - e.stamp)
-            chunk = [event]  # Start a new chunk with the current success
+            chunk = []  # Start a new chunk 
 
     # If no lead times were recorded, return 0
     if not lead_times:
