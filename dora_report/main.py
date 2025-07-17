@@ -169,7 +169,7 @@ def parse_interval(interval_str):
         unit = interval_str[-1]
         if unit not in ["d", "w", "m"]:
             raise ValueError("Invalid interval format. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)")
-        return int(interval_str[:-1]) * unit_in_seconds[unit], unit
+        return int(interval_str[:-1]) * unit_in_seconds[unit] * 1.0, unit
     except IndexError as e:
         raise ValueError("Zero-length argument not supported. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)") from e
 
