@@ -71,6 +71,8 @@ def interval_chunks():
 def test_dora_report_records(interval_chunks, root_logger):
     args = MagicMock()
     args.collector = MagicMock()
+    args.interval_seconds = 86400.0
+    args.interval_unit = "d"
     args.since = datetime(2025, 7, 12)
     args.until = datetime(2025, 7, 14)
     args.log = root_logger
