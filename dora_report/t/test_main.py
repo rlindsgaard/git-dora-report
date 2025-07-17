@@ -96,7 +96,7 @@ def test_parse_interval_valid(interval_str, expected_output):
     [
         ("10", "Invalid interval format. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)"),  # Missing suffix
         ("5y", "Invalid interval format. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)"),  # Unknown suffix
-        ("", "Invalid interval format. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)"),    # Empty string
+        ("", "Zero-length argument not supported. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)"),    # Empty string
     ]
 )
 def test_parse_interval_invalid(interval_str, expected_exception_message):

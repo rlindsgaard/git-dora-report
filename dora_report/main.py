@@ -131,11 +131,12 @@ def main():
             else datetime.strptime(args.since, "%Y-%m-%d")
         )
 
-    interval_seconds = parse_interval(args.interval)
+    interval_seconds, interval_unit = parse_interval(args.interval)
 
     args.since_dt = since_dt
     args.until_dt = until_dt
     args.interval_seconds = interval_seconds
+    args.interval_unit = interval_unit
       
     args.log.debug(args)
     collector = collectors[args.collector_name].from_arguments(args)
@@ -164,11 +165,13 @@ def parse_interval(interval_str):
     """
     Parse interval string into seconds
     """
-    unit = interval_str[-1]
-    if unit not in ["d", "w", "m"]:
-        raise ValueError("Invalid interval format. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)")
-    return int(interval_str[:-1]) * unit_in_seconds[unit] * 1.0, unit
-
+    try:
+        unit = interval_str[-1]
+        if unit not in ["d", "w", "m"]:
+            raise ValueError("Invalid interval format. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)")
+        return int(interval_str[:-1]) * unit_in_seconds[unit], unit
+    except IndexError, e:
+        raise ValueError("Zero-length argument not supported. Use Nd, Nw, or Nm (e.g., 7d, 2w, 1m)")
 
 def chunk_interval(event_gen, since, size, until):
       
