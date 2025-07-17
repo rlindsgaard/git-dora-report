@@ -92,7 +92,7 @@ def lead_time_for_changes(change_events: list[ChangeEvent]) -> timedelta:
         if event.success:  # A success marks the end of a chunk
             if len(chunk) > 1:  # Only calculate if there was a failure before this success
                 success_stamp = event.stamp
-                for e in chunk[:-1]:  # Exclude the final successful event
+                for e in chunk:  # Exclude the final successful event
                     lead_times.append(success_stamp - e.stamp)
             chunk = []  # Start a new chunk 
 
