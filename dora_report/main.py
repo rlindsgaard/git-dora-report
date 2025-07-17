@@ -48,6 +48,10 @@ class Record:
         
     def json(self):
         return json.dumps(self.fields, cls=DateTimeEncoder)
+        
+    def __eq__(self, other):
+        # just an approximate so far
+        return all(other.fields[k] == v for k, v in self.items())
 
     def __repr__(self):
         rep = "Record<"

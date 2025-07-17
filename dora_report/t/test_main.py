@@ -79,7 +79,26 @@ def test_dora_report_records(interval_chunks, root_logger):
     
     report = DoraReport(args)
     report.analyze()
-    assert report.records == []
+    assert report.records == [
+        Record(
+            start=datetime(2025, 7, 12), 
+            end=datetime(2025, 7, 13), 
+            duration=timedelta(days=1), 
+            deployment_frequency=3.0, 
+            change_failure_rate=0.0,
+            mean_time_to_recover=timedelta(0),
+            lead_time_for_changes=timedelta(0),
+        ),
+        Record(
+            start=datetime(2025, 7, 13), 
+            end=datetime(2025, 7, 14), 
+            duration=timedelta(days=1), 
+            deployment_frequency=2.0, 
+            change_failure_rate=0.0, 
+            mean_time_to_recover=timedelta(0), 
+            lead_time_for_changes=timedelta(0),
+        ),
+    ]
 
 
 @pytest.mark.parametrize(
