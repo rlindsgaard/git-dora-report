@@ -58,8 +58,8 @@ def interval_chunks():
                         FakeEvent(stamp=datetime(2025, 7, 12, 9, 0, 0), success=None),
                         FakeEvent(stamp=datetime(2025, 7, 12, 11, 55, 0), success=False),
                         FakeEvent(stamp=datetime(2025, 7, 12, 15, 15, 0), success=True),
+                        FakeEvent(stamp=datetime(2025, 7, 12, 15, 45, 0), success=False),
                     ],
-FakeEvent(stamp=datetime(2025, 7, 12, 15, 45, 0), success=False 
                 },
                 {
                     "start": datetime(2025, 7, 13),
