@@ -55,18 +55,19 @@ def interval_chunks():
                     "duration": timedelta(days=1),
                     "last_failure": None,
                     "events": [
-                        FakeEvent(stamp=datetime(2025, 7, 12, 9, 0, 0), success=True),
-                        FakeEvent(stamp=datetime(2025, 7, 12, 11, 55, 0), success=True),
+                        FakeEvent(stamp=datetime(2025, 7, 12, 9, 0, 0), success=None),
+                        FakeEvent(stamp=datetime(2025, 7, 12, 11, 55, 0), success=False),
                         FakeEvent(stamp=datetime(2025, 7, 12, 15, 15, 0), success=True),
                     ],
+FakeEvent(stamp=datetime(2025, 7, 12, 15, 45, 0), success=False 
                 },
                 {
                     "start": datetime(2025, 7, 13),
                     "end": datetime(2025, 7, 14),
                     "duration": timedelta(days=1),
-                    "last_failure": None,
+                    "last_failure": datetime(2025, 7, 12, 15, 45, 0),
                     "events": [
-                        FakeEvent(stamp=datetime(2025, 7, 13, 8, 5, 0), success=True),
+                        FakeEvent(stamp=datetime(2025, 7, 13, 8, 5, 0), success=False),
                         FakeEvent(stamp=datetime(2025, 7, 13, 10, 0), success=True),
                     ],
                 },
